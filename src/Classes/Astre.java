@@ -68,4 +68,8 @@ public class Astre {
                 ", vitesse=" + vitesse +
                 '}';
     }
+
+    public Point3D getPosition() {
+        return this.position;
+    }
 }

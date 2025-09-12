@@ -74,9 +74,14 @@ public class App extends Application {
                 mousePosY = event.getSceneY();
                 double mouseDeltaX = (mousePosX - mouseOldX);
                 double mouseDeltaY = (mousePosY - mouseOldY);
+
                 double modifier = 0.05;
+
+                // Inverser UNIQUEMENT la rotation horizontale (Y) si la caméra est en Z+
+                double invertX = (camera.getTranslateZ() > 0) ? -1 : 1;
+
                 rotateY.setAngle(rotateY.getAngle() - mouseDeltaX * modifier);
-                rotateX.setAngle(rotateX.getAngle() + mouseDeltaY * modifier);
+                rotateX.setAngle(rotateX.getAngle() + mouseDeltaY * modifier * invertX); // Pas d'inversion pour X
             }
         });
 
@@ -88,30 +93,28 @@ public class App extends Application {
 
             switch (event.getCode()) {
                 case Z:
-                    // Avancer dans la direction de la caméra
                     camera.setTranslateX(camera.getTranslateX() + direction.getX() * moveSpeed);
                     camera.setTranslateY(camera.getTranslateY() + direction.getY() * moveSpeed);
                     camera.setTranslateZ(camera.getTranslateZ() + direction.getZ() * moveSpeed);
                     break;
                 case S:
-                    // Reculer dans la direction de la caméra
                     camera.setTranslateX(camera.getTranslateX() - direction.getX() * moveSpeed);
                     camera.setTranslateY(camera.getTranslateY() - direction.getY() * moveSpeed);
                     camera.setTranslateZ(camera.getTranslateZ() - direction.getZ() * moveSpeed);
                     break;
                 case Q:
-                    // Déplacement latéral à gauche
                     camera.setTranslateX(camera.getTranslateX() - right.getX() * moveSpeed);
                     camera.setTranslateZ(camera.getTranslateZ() - right.getZ() * moveSpeed);
                     break;
                 case D:
-                    // Déplacement latéral à droite
                     camera.setTranslateX(camera.getTranslateX() + right.getX() * moveSpeed);
                     camera.setTranslateZ(camera.getTranslateZ() + right.getZ() * moveSpeed);
                     break;
             }
         });
     }
+
+
 
     @Override
     public void start(Stage primaryStage) {
