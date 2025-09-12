@@ -36,6 +36,8 @@ public class App extends Application {
         camera.setNearClip(0.1);
         camera.setFarClip(10000.0);
         camera.getTransforms().addAll(rotateX, rotateY);
+        camera.setTranslateX(WIDTH/2);
+        camera.setTranslateY(HEIGHT/2);
         camera.setTranslateZ(-1000); // Position initiale
         
         scene.setCamera(camera);
