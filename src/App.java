@@ -15,19 +15,26 @@ import javafx.stage.Stage;
 public class App extends Application {
     public final int WIDTH = 800;
     public final int HEIGHT = 600;
+    public final double SCALE_DISTANCE = 1e6;
 
-    // Variables pour la caméra et les transformations
     private PerspectiveCamera camera;
     private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
     private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
     private double mousePosX, mousePosY;
     private double mouseOldX, mouseOldY;
 
-    // Planètes
     private Astre soleil, mercure, venus, terre, mars, jupiter, saturne, uranus, neptune;
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    // Méthode pour calculer la direction de la caméra
+    private Point3D getCameraDirection() {
+        Point3D forward = new Point3D(0, 0, 1);
+        forward = rotateY.transform(forward);
+        forward = rotateX.transform(forward);
+        return forward.normalize();
     }
 
     // Initialisation de la caméra
@@ -38,28 +45,18 @@ public class App extends Application {
         camera.getTransforms().addAll(rotateX, rotateY);
         camera.setTranslateX(WIDTH/2);
         camera.setTranslateY(HEIGHT/2);
-        camera.setTranslateZ(-1000); // Position initiale
-        
+        camera.setTranslateZ(-1000);
         scene.setCamera(camera);
     }
 
     // Configuration des contrôles de caméra
     private void setupCameraControls(Scene scene) {
-        // Gestion du zoom avec la molette
+        // Désactiver le zoom avec la molette
         scene.setOnScroll(event -> {
-            double delta = event.getDeltaY();
-            double zoomFactor = 1.1;
-            
-            if (delta > 0) {
-                camera.setTranslateZ(camera.getTranslateZ() / zoomFactor);
-            } else {
-                camera.setTranslateZ(camera.getTranslateZ() * zoomFactor);
-            }
-            
             event.consume();
         });
 
-        // Gestion du clic droit pour tourner dans l'espace
+        // Rotation avec clic droit
         scene.setOnMousePressed(event -> {
             if (event.isSecondaryButtonDown()) {
                 mousePosX = event.getSceneX();
@@ -75,18 +72,43 @@ public class App extends Application {
                 mouseOldY = mousePosY;
                 mousePosX = event.getSceneX();
                 mousePosY = event.getSceneY();
-                
                 double mouseDeltaX = (mousePosX - mouseOldX);
                 double mouseDeltaY = (mousePosY - mouseOldY);
-                
-                // Sensibilité de la rotation
                 double modifier = 0.05;
-                
-                // Rotation autour de l'axe Y (mouvement horizontal de la souris)
                 rotateY.setAngle(rotateY.getAngle() - mouseDeltaX * modifier);
-                
-                // Rotation autour de l'axe X (mouvement vertical de la souris)
                 rotateX.setAngle(rotateX.getAngle() + mouseDeltaY * modifier);
+            }
+        });
+
+        // Déplacement avec ZQSD (relatif à la direction de la caméra)
+        scene.setOnKeyPressed(event -> {
+            double moveSpeed = 10.0;
+            Point3D direction = getCameraDirection();
+            Point3D right = direction.crossProduct(new Point3D(0, 1, 0)).normalize();
+
+            switch (event.getCode()) {
+                case Z:
+                    // Avancer dans la direction de la caméra
+                    camera.setTranslateX(camera.getTranslateX() + direction.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() + direction.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() + direction.getZ() * moveSpeed);
+                    break;
+                case S:
+                    // Reculer dans la direction de la caméra
+                    camera.setTranslateX(camera.getTranslateX() - direction.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() - direction.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() - direction.getZ() * moveSpeed);
+                    break;
+                case Q:
+                    // Déplacement latéral à gauche
+                    camera.setTranslateX(camera.getTranslateX() - right.getX() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() - right.getZ() * moveSpeed);
+                    break;
+                case D:
+                    // Déplacement latéral à droite
+                    camera.setTranslateX(camera.getTranslateX() + right.getX() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() + right.getZ() * moveSpeed);
+                    break;
             }
         });
     }
@@ -97,14 +119,9 @@ public class App extends Application {
         primaryStage.setTitle("Système Solaire");
         Scene scene = new Scene(root, WIDTH, HEIGHT, true);
         scene.setFill(Color.BLACK);
-
-        // 1. D'ABORD initialiser la caméra
         initCamera(scene);
-
-        // 2. ENSUITE configurer les contrôles de caméra
         setupCameraControls(scene);
 
-        // 3. PUIS créer les objets
         // Création du Soleil
         soleil = new Astre(
             "Soleil",
@@ -117,32 +134,68 @@ public class App extends Application {
         );
         soleil.renderAstre();
 
-        // 4. ENFIN afficher la scène
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        // Animation
+        // Animation avec affichage des coordonnées
         new AnimationTimer() {
             private long lastTime = System.nanoTime();
-
+            private long lastPrintTime = 0;
             @Override
             public void handle(long now) {
                 double deltaT = (now - lastTime) / 1_000_000_000.0;
                 lastTime = now;
-
-                // Ajoutez ici votre logique d'animation
-                // Exemple : mise à jour des positions des planètes
+                if (now - lastPrintTime > 1_000_000_000L) {
+                    printCameraPosition();
+                    lastPrintTime = now;
+                }
             }
         }.start();
+    }
+
+    // Méthodes pour récupérer les coordonnées de la caméra
+    public double getCameraX() {
+        return camera.getTranslateX();
+    }
+
+    public double getCameraY() {
+        return camera.getTranslateY();
+    }
+
+    public double getCameraZ() {
+        return camera.getTranslateZ();
+    }
+
+    public double getRotationX() {
+        return rotateX.getAngle();
+    }
+
+    public double getRotationY() {
+        return rotateY.getAngle();
+    }
+
+    // Méthode pour récupérer toutes les coordonnées formatées
+    public String getCameraCoordinates() {
+        return String.format("Position: (%.2f, %.2f, %.2f) - Rotation: (%.2f°, %.2f°)",
+                           getCameraX(), getCameraY(), getCameraZ(),
+                           getRotationX(), getRotationY());
+    }
+
+    // Méthode pour afficher les coordonnées dans la console
+    public void printCameraPosition() {
+        System.out.println("=== COORDONNÉES CAMÉRA ===");
+        System.out.println(getCameraCoordinates());
+        System.out.println("==========================");
     }
 
     // Méthode pour réinitialiser la vue
     public void resetCamera() {
         rotateX.setAngle(0);
         rotateY.setAngle(0);
-        // Revenir à la position centrée sur le soleil
         camera.setTranslateX(WIDTH/2);
         camera.setTranslateY(HEIGHT/2);
         camera.setTranslateZ(-300);
+        System.out.println("Caméra réinitialisée !");
+        printCameraPosition();
     }
 }
