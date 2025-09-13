@@ -1,8 +1,10 @@
 package Classes;
 
+import java.io.InputStream;
 import java.util.Vector;
 import javafx.geometry.Point3D;
 import javafx.scene.Group;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
@@ -85,19 +87,18 @@ public class Astre {
     public void updatePosition(double t, double SCALE_DISTANCE, Point3D soleilPosition) {
         double[] pos = orbite.calculerPosition(t);
         
-        // CORRECTION : Multiplier par SCALE_DISTANCE pour convertir UA en pixels
+        
+        
         this.position = new Point3D(
-            pos[0] * SCALE_DISTANCE + soleilPosition.getX(), // UA × pixels/UA + centre
-            pos[1] * SCALE_DISTANCE + soleilPosition.getY(), // UA × pixels/UA + centre
-            pos[2] * SCALE_DISTANCE + soleilPosition.getZ()  // UA × pixels/UA + centre (pour la 3D)
+            pos[0] * SCALE_DISTANCE + soleilPosition.getX(), 
+            pos[1] * SCALE_DISTANCE + soleilPosition.getY(), 
+            pos[2] * SCALE_DISTANCE + soleilPosition.getZ()  
         );
     }
 
-    public void updatePositionAroundPlanet(double t, Point3D planetePosition, double SCALE_DISTANCE) {
+    public void updatePositionAroundTerre(double t, Point3D planetePosition, double SCALE_DISTANCE) {
         double[] pos = orbite.calculerPosition(t);
         
-        // La position est calculée par rapport à la planète, pas au Soleil
-        // On utilise une échelle différente car les distances planète-lune sont beaucoup plus petites
         double echelleLunaire = SCALE_DISTANCE * 10; // Facteur 10 pour rendre la Lune visible
         
         this.position = new Point3D(
@@ -106,7 +107,33 @@ public class Astre {
             pos[2] * echelleLunaire + planetePosition.getZ()
         );
     }
-        
+
+    public void updatePositionAroundJupiter(double t, Point3D jupiterPosition, double SCALE_DISTANCE) {
+        double[] pos = orbite.calculerPosition(t);
+
+        // Réduction forte pour que Europa reste proche de Jupiter
+        double echelleEuropa = SCALE_DISTANCE * 0.05; // ajuste à l’œil
+
+        this.position = new Point3D(
+            pos[0] * echelleEuropa + jupiterPosition.getX(),
+            pos[1] * echelleEuropa + jupiterPosition.getY(),
+            pos[2] * echelleEuropa + jupiterPosition.getZ()
+        );
+    }
+
+    public void updatePositionAroundSaturne(double t, Point3D saturnePosition, double SCALE_DISTANCE) {
+        double[] pos = orbite.calculerPosition(t);
+
+        // Titan est loin → un peu plus grand qu’Europa
+        double echelleTitan = SCALE_DISTANCE * 0.1; // ajuste à l’œil
+
+        this.position = new Point3D(
+            pos[0] * echelleTitan + saturnePosition.getX(),
+            pos[1] * echelleTitan + saturnePosition.getY(),
+            pos[2] * echelleTitan + saturnePosition.getZ()
+        );
+    }
+            
     // // Affiche l'astre et sa trajectoire
     // public boolean renderAstreSansTrajectoire() {
     //     if (this.sprite == null) {
@@ -124,60 +151,82 @@ public class Astre {
     //     return true;
     // }
 
-   public boolean renderAstreSansTrajectoire(boolean traj) {
-        if (this.sprite == null) {
-            Sphere sphere = new Sphere(this.diametre / 2, 32);
-            sphere.setMaterial(this.material);
-            this.sprite = sphere;
-            root.getChildren().add(sphere);
-            this.previousPosition = this.position; // Initialiser la position précédente
-        }
+   public boolean renderAstreSansTrajectoire(boolean traj, String texturePath) {
+        try {
+            if (this.sprite == null) {
+                Sphere sphere = new Sphere(this.diametre / 2, 32);
 
-        // Mettre à jour seulement la position du sprite
-        this.sprite.setTranslateX(this.position.getX());
-        this.sprite.setTranslateY(this.position.getY());
-        this.sprite.setTranslateZ(this.position.getZ());
-
-        if (traj == true){
-                // Créer une ligne blanche semi-transparente entre previousPosition et position
-            if (previousPosition != null && !previousPosition.equals(position)) {
-                Point3D start = previousPosition;
-                Point3D end = position;
-
-                Point3D diff = end.subtract(start);
-                double height = diff.magnitude();
-
-                if (height > 0) {
-                    Cylinder line = new Cylinder(0.4, height); // 0.4px d'épaisseur
-                    PhongMaterial material = new PhongMaterial();
-                    material.setDiffuseColor(Color.rgb(255, 255, 255, 0.5)); // 50% transparent
-                    material.setSpecularColor(Color.WHITE);
-                    line.setMaterial(material);
-
-                    // Positionner au milieu
-                    Point3D mid = start.midpoint(end);
-                    line.setTranslateX(mid.getX());
-                    line.setTranslateY(mid.getY());
-                    line.setTranslateZ(mid.getZ());
-
-                    // Orientation
-                    Point3D yAxis = new Point3D(0, 1, 0);
-                    Point3D axisOfRotation = yAxis.crossProduct(diff);
-                    double angle = Math.toDegrees(Math.acos(diff.normalize().dotProduct(yAxis)));
-                    if (!Double.isNaN(angle) && axisOfRotation.magnitude() > 0) {
-                        line.getTransforms().add(new Rotate(angle, axisOfRotation));
+                // Création du matériau avec texture
+                PhongMaterial material = new PhongMaterial();
+                if (texturePath != null && !texturePath.isEmpty()) {
+                    InputStream textureStream = getClass().getResourceAsStream(texturePath);
+                    if (textureStream != null) {
+                        Image texture = new Image(textureStream);
+                        material.setDiffuseMap(texture); // applique la texture
+                    } else {
+                        System.err.println("Erreur : texture introuvable à " + texturePath);
+                        material.setDiffuseColor(Color.GRAY); // fallback
                     }
-
-                    root.getChildren().add(line);
+                } else {
+                    material.setDiffuseColor(Color.GRAY); // fallback
                 }
+
+                sphere.setMaterial(material);
+                this.material = material; // garder référence
+                this.sprite = sphere;
+                root.getChildren().add(sphere);
+                this.previousPosition = this.position; // Initialiser la position précédente
             }
 
-            // Mettre à jour pour le prochain frame
-            previousPosition = position;
+            // Mettre à jour seulement la position du sprite
+            this.sprite.setTranslateX(this.position.getX());
+            this.sprite.setTranslateY(this.position.getY());
+            this.sprite.setTranslateZ(this.position.getZ());
 
+            if (traj) {
+                // Créer une ligne blanche semi-transparente entre previousPosition et position
+                if (previousPosition != null && !previousPosition.equals(position)) {
+                    Point3D start = previousPosition;
+                    Point3D end = position;
+
+                    Point3D diff = end.subtract(start);
+                    double height = diff.magnitude();
+
+                    if (height > 0) {
+                        Cylinder line = new Cylinder(0.4, height); // 0.4px d'épaisseur
+                        PhongMaterial lineMaterial = new PhongMaterial();
+                        lineMaterial.setDiffuseColor(Color.rgb(255, 255, 255, 0.5)); // 50% transparent
+                        lineMaterial.setSpecularColor(Color.WHITE);
+                        line.setMaterial(lineMaterial);
+
+                        // Positionner au milieu
+                        Point3D mid = start.midpoint(end);
+                        line.setTranslateX(mid.getX());
+                        line.setTranslateY(mid.getY());
+                        line.setTranslateZ(mid.getZ());
+
+                        // Orientation
+                        Point3D yAxis = new Point3D(0, 1, 0);
+                        Point3D axisOfRotation = yAxis.crossProduct(diff);
+                        double angle = Math.toDegrees(Math.acos(diff.normalize().dotProduct(yAxis)));
+                        if (!Double.isNaN(angle) && axisOfRotation.magnitude() > 0) {
+                            line.getTransforms().add(new Rotate(angle, axisOfRotation));
+                        }
+
+                        root.getChildren().add(line);
+                    }
+                }
+
+                // Mettre à jour pour le prochain frame
+                previousPosition = position;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
         return true;
     }
+
 
 
     // Réinitialise la trajectoire

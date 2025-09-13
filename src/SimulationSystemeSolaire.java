@@ -1,7 +1,4 @@
-import java.util.Arrays;
-import java.util.Vector;
 import Classes.Astre;
-import Classes.OrbitePlanete;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.geometry.Point3D;
@@ -11,6 +8,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.stage.Stage;
+
 
 public class SimulationSystemeSolaire extends Application {
     public final int WIDTH = 800;
@@ -92,6 +90,14 @@ public class SimulationSystemeSolaire extends Application {
     double rayonNeptune = (24622.0 / 2.0) / SCALE_DIAMETER;
     double rayonLune = (3474.8 / 2.0) / SCALE_DIAMETER;
 
+    // Paramètres approximatifs
+    double perihelieEuropa = 670_900;       
+    double aphelieEuropa = 670_900;         
+    double periodeOrbitaleEuropa = 3.551;  
+    double inclinaisonEuropa = 0.47;       
+    double longitudeNoeudEuropa = 219.106;
+    double argumentPerihelieEuropa = 88.970;
+
     // Paramètres orbitaux de la Lune (par rapport à la Terre)
     public double periodOrbitalLune = 27.322 / 365.25; // 27.322 jours convertis en années
     public double perigeeLune = 0.002573; // 384 400 km convertis en UA (384400 / 149597870.7)
@@ -100,13 +106,21 @@ public class SimulationSystemeSolaire extends Application {
     public double longitudeNoeudLune = 125.044; // Longitude du nœud ascendant
     public double argumentPerigeeLune = 318.308; // Argument du périgée
 
+    // Paramètres approximatifs
+    double perihelieTitan = 1_222_000;      // km, distance minimale Saturne-Titan
+    double aphelieTitan = 1_222_000;        // km, pour Titan orbite quasi circulaire
+    double periodeOrbitaleTitan = 15.945;   // jours
+    double inclinaisonTitan = 0.3;          // degrés par rapport au plan équatorial de Saturne
+    double longitudeNoeudTitan = 169.529;
+    double argumentPerihelieTitan = 186.585;
+
     private PerspectiveCamera camera;
     private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
     private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
     private double mousePosX, mousePosY;
     private double mouseOldX, mouseOldY;
     private Astre soleil, mercure, venus, terre, mars, jupiter, saturne, uranus, neptune;
-    private Astre lune;
+    private Astre lune, titan, europa;
 
     public static void main(String[] args) {
         launch(args);
@@ -215,6 +229,9 @@ public class SimulationSystemeSolaire extends Application {
                     break;
                 case DIGIT9:
                     positionCameraBehindPlanet(lune.position, terre.position, rayonLune);
+                    break;
+                case DIGIT0:
+                    positionCameraBehindPlanet(europa.position, terre.position, rayonLune);
                     break;
                 case R:
                     initCamera(scene);
@@ -362,7 +379,7 @@ public class SimulationSystemeSolaire extends Application {
             Color.YELLOW
         );
         soleil.position = new Point3D(WIDTH / 2, HEIGHT / 2, 0);
-        soleil.renderAstreSansTrajectoire(false);
+        soleil.renderAstreSansTrajectoire(false, "/resources/textures/soleil.png");
 
         // Création de toutes les planètes avec leurs paramètres orbitaux 3D complets
 
@@ -492,6 +509,36 @@ public class SimulationSystemeSolaire extends Application {
             Color.LIGHTGRAY
         );
 
+        // Titan (satellite de Saturne)
+        titan = new Astre(
+            "Titan",
+            1.3452e23,
+            5150 / SCALE_DIAMETER,
+            perihelieTitan,
+            aphelieTitan,
+            periodeOrbitaleTitan,
+            inclinaisonTitan,
+            longitudeNoeudTitan,
+            argumentPerihelieTitan,
+            root,
+            Color.ORANGE
+        );
+
+        // Europa (satellite de Jupiter)
+        europa = new Astre(
+            "Europa",
+            4.799e22,
+            3122 / SCALE_DIAMETER,
+            perihelieEuropa,
+            aphelieEuropa,
+            periodeOrbitaleEuropa,
+            inclinaisonEuropa,
+            longitudeNoeudEuropa,
+            argumentPerihelieEuropa,
+            root,
+            Color.LIGHTGRAY
+        );
+
         // Animation des orbites
         new AnimationTimer() {
         private long lastTime = System.nanoTime();
@@ -502,7 +549,7 @@ public class SimulationSystemeSolaire extends Application {
         public void handle(long now) {
             double deltaT = (now - lastTime) / 1_000_000_000.0;
             lastTime = now;
-            time += deltaT / 50; // Vitesse d'animation
+            time += deltaT / 5000; // Vitesse d'animation
 
             // Mise à jour des positions des planètes
             mercure.updatePosition(time, SCALE_DISTANCE, soleil.position);
@@ -513,7 +560,10 @@ public class SimulationSystemeSolaire extends Application {
             saturne.updatePosition(time, SCALE_DISTANCE, soleil.position);
             uranus.updatePosition(time, SCALE_DISTANCE, soleil.position);
             neptune.updatePosition(time, SCALE_DISTANCE, soleil.position);
-            lune.updatePositionAroundPlanet(time, terre.position, SCALE_DISTANCE);
+            lune.updatePositionAroundTerre(time, terre.position,  SCALE_DISTANCE);
+            europa.updatePositionAroundJupiter(time, jupiter.position, SCALE_DISTANCE);
+            titan.updatePositionAroundSaturne(time, saturne.position, SCALE_DISTANCE);
+
 
             if (now - lastPrintTime > 5_000_000_00L) { // Toutes les 5 secondes
                 affPos();
@@ -524,15 +574,18 @@ public class SimulationSystemeSolaire extends Application {
             
             
             
-            mercure.renderAstreSansTrajectoire(doTrajectotyRender);
-            venus.renderAstreSansTrajectoire(doTrajectotyRender);
-            terre.renderAstreSansTrajectoire(doTrajectotyRender);
-            mars.renderAstreSansTrajectoire(doTrajectotyRender);
-            jupiter.renderAstreSansTrajectoire(doTrajectotyRender);
-            saturne.renderAstreSansTrajectoire(doTrajectotyRender);
-            uranus.renderAstreSansTrajectoire(doTrajectotyRender);
-            neptune.renderAstreSansTrajectoire(doTrajectotyRender);
-            lune.renderAstreSansTrajectoire(doTrajectotyRender);
+            mercure.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/mercure.png");
+            venus.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/venus.png");
+            terre.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/terre.png");
+            mars.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/mars.png");
+            jupiter.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/jupiter.png");
+            saturne.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/saturne.png");
+            uranus.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/uranus.png");
+            neptune.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/neptune.png");
+            lune.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/lune.png");
+            titan.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/titan.png");
+            europa.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/europa.png");
+
             
         }
     }.start();
@@ -550,7 +603,9 @@ public class SimulationSystemeSolaire extends Application {
         System.out.println(lune.toString());
         System.out.println(mars.toString());
         System.out.println(jupiter.toString());
+        System.out.println(europa.toString());
         System.out.println(saturne.toString());
+        System.out.println(titan.toString());
         System.out.println(uranus.toString());
         System.out.println(neptune.toString());
         
