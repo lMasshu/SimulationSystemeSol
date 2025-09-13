@@ -17,6 +17,8 @@ public class App extends Application {
     public final int HEIGHT = 600;
     public final double SCALE_DISTANCE = 150;    // 150 pixels = 1 UA
     public final double SCALE_DIAMETER = 1e4;    // 10 000 km par pixel pour les diamètres
+    public boolean Tpressed = false;
+    public boolean doTrajectotyRender = false;
 
     // Périodes orbitales des planètes (en années terrestres)
     public double periodOrbitalMercure = 0.2408;
@@ -78,6 +80,17 @@ public class App extends Application {
     public double argumentPerihelieUranus = 96.998;
     public double argumentPerihelieNeptune = 276.336;
 
+    // Rayon des planètes
+
+    double rayonMercure = (4879.4 / 2.0) / SCALE_DIAMETER;
+    double rayonVenus = (6051.8 * 2.0 / 2.0) / SCALE_DIAMETER;
+    double rayonTerre = (12756.0 / 2.0) / SCALE_DIAMETER;
+    double rayonMars = (6779.5 / 2.0) / SCALE_DIAMETER;
+    double rayonJupiter = (139820.0 / 2.0) / SCALE_DIAMETER;
+    double rayonSaturne = (58232.0 / 2.0) / SCALE_DIAMETER;
+    double rayonUranus = (50724.0 / 2.0) / SCALE_DIAMETER;
+    double rayonNeptune = (24622.0 / 2.0) / SCALE_DIAMETER;
+
     private PerspectiveCamera camera;
     private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
     private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
@@ -87,26 +100,6 @@ public class App extends Application {
 
     public static void main(String[] args) {
         launch(args);
-    }
-
-    // Méthode pour calculer la direction de la caméra
-    private Point3D getCameraDirection() {
-        Point3D forward = new Point3D(0, 0, 1);
-        forward = rotateY.transform(forward);
-        forward = rotateX.transform(forward);
-        return forward.normalize();
-    }
-
-    // Initialisation de la caméra
-    private void initCamera(Scene scene) {
-        camera = new PerspectiveCamera(true);
-        camera.setNearClip(0.1);
-        camera.setFarClip(100000.0);
-        camera.getTransforms().addAll(rotateX, rotateY);
-        camera.setTranslateX(WIDTH / 2);
-        camera.setTranslateY(HEIGHT / 2);
-        camera.setTranslateZ(-500);
-        scene.setCamera(camera);
     }
 
     // Configuration des contrôles de caméra
@@ -179,7 +172,7 @@ public class App extends Application {
                     camera.setTranslateZ(camera.getTranslateZ() - right.getZ() * moveSpeed);
                     break;
                 case R:
-                    resetCamera();
+                    // resetCamera();
                     break;
                 case SPACE:
                     // Move camera up (positive Y direction)
@@ -189,73 +182,150 @@ public class App extends Application {
                     // Move camera down (negative Y direction)
                     camera.setTranslateY(camera.getTranslateY() + moveSpeed);
                     break;
-                case T:
-                    // Position camera behind Earth in the direction of the Sun
-                    positionCameraBehindPlanet(terre.position, soleil.position, 6_378);
+                case DIGIT1:
+                    positionCameraBehindPlanet(mercure.position, soleil.position, rayonMercure);
                     break;
-                case M:
-                    // Position camera behind Mars in the direction of the Sun
-                    positionCameraBehindPlanet(mars.position, soleil.position, 3_389);
+                case DIGIT2:
+                    positionCameraBehindPlanet(venus.position, soleil.position, rayonVenus);
                     break;
-                // case E:
-                //     // Focus on Earth
-                //     focusOnPlanet(terre.position, 20_000);
-                //     break;
-                // case A:
-                //     // Focus on Mars  
-                //     focusOnPlanet(mars.position, 15_000);
-                //     break;
-                // case O:
-                //     // Focus on Sun
-                //     focusOnPlanet(soleil.position, 200_000);
-                //     break;
-                // case DIGIT1:
-                //     // Fast movement speed
-                //     moveSpeed = 50.0;
-                //     break;
-                // case DIGIT2:
-                //     // Normal movement speed
-                //     moveSpeed = 10.0;
-                //     break;
-                // case DIGIT3:
-                //     // Slow movement speed
-                //     moveSpeed = 2.0;
-                //     break;
+                case DIGIT3:
+                    positionCameraBehindPlanet(terre.position, soleil.position, rayonTerre);
+                    break;
+                case DIGIT4:
+                    positionCameraBehindPlanet(mars.position, soleil.position, rayonMars);
+                    break;
+                case DIGIT5:
+                    positionCameraBehindPlanet(jupiter.position, soleil.position, rayonJupiter);
+                    break;
+                case DIGIT6:
+                    positionCameraBehindPlanet(saturne.position, soleil.position, rayonSaturne);
+                    break;
+                case DIGIT7:
+                    positionCameraBehindPlanet(uranus.position, soleil.position, rayonUranus);
+                    break;
+                case DIGIT8:
+                    positionCameraBehindPlanet(neptune.position, soleil.position, rayonNeptune);
+                    break;
             }
             event.consume();
         });
     }
 
-    // Helper method to position camera behind a planet
+
+
+    private double lastYaw = 0;
+    private double lastPitch = 0;
+    private static final double EPS = 1e-6;
+
+
+    private void initCamera(Scene scene) {
+        camera = new PerspectiveCamera(true);
+        camera.setNearClip(0.1);
+        camera.setFarClip(100000.0);
+
+        // IMPORTANT : ordre = yaw (Y) puis pitch (X)
+        camera.getTransforms().clear();
+        camera.getTransforms().addAll(rotateY, rotateX);
+
+        // orientation de départ demandée
+        rotateY.setAngle(-90.0); // yaw initial
+        rotateX.setAngle(90.0);  // pitch initial
+
+        camera.setTranslateX(WIDTH / 2);
+        camera.setTranslateY(HEIGHT / 2);
+        camera.setTranslateZ(-500); // garde un Z initial hors du plan z=0
+        scene.setCamera(camera);
+    }
+
+    private Point3D getCameraDirection() {
+        Point3D forward = new Point3D(0, 0, 1);
+        forward = rotateY.transform(forward);
+        forward = rotateX.transform(forward);
+        return forward.normalize();
+    }
+
+
     private void positionCameraBehindPlanet(Point3D planetPos, Point3D sunPos, double planetRadius) {
-        // Calculate direction from sun to planet
-        Point3D sunToPlanet = planetPos.subtract(sunPos).normalize();
-        
-        // Position camera behind the planet (opposite to sun direction)
-        double distance = planetRadius * 3; // Adjust multiplier as needed for good viewing distance
-        Point3D cameraPos = planetPos.add(sunToPlanet.multiply(distance));
-        
+        Point3D sunToPlanet = planetPos.subtract(sunPos);
+        if (sunToPlanet.magnitude() < EPS) return;
+
+        Point3D dir = sunToPlanet.normalize();
+
+
+
+        double cameraDistance = planetRadius + 20;
+
+        Point3D cameraPos = planetPos.add(dir.multiply(cameraDistance));
+
         camera.setTranslateX(cameraPos.getX());
         camera.setTranslateY(cameraPos.getY());
         camera.setTranslateZ(cameraPos.getZ());
-        
-        // Optional: Make camera look at the planet
-        lookAt(planetPos);
+
+        // Regarder le Soleil (ou planetPos selon le comportement voulu)
+        lookAt(sunPos);
     }
 
-    // Optional helper method to make camera look at a specific point
+
     private void lookAt(Point3D target) {
-        Point3D cameraPos = new Point3D(camera.getTranslateX(), camera.getTranslateY(), camera.getTranslateZ());
-        Point3D direction = target.subtract(cameraPos).normalize();
-        
-        // Calculate rotation angles (this is a simplified version)
-        double yaw = Math.toDegrees(Math.atan2(-direction.getX(), -direction.getZ()));
-        double pitch = Math.toDegrees(Math.asin(direction.getY()));
-        
-        camera.setRotationAxis(Rotate.Y_AXIS);
-        camera.setRotate(yaw);
-        // Note: For full 6DOF camera control, you'd need more complex rotation handling
+        Point3D cameraPos = new Point3D(
+            camera.getTranslateX(),
+            camera.getTranslateY(),
+            camera.getTranslateZ()
+        );
+
+        Point3D dirVec = target.subtract(cameraPos);
+        double dx = dirVec.getX();
+        double dy = dirVec.getY();
+        double dz = dirVec.getZ();
+
+        double horiz = Math.hypot(dx, dz); // longueur projection sur XZ
+
+        double yaw;
+        double pitch;
+
+        if (horiz < EPS) {
+            // caméra directement au-dessus/en-dessous : on évite le "flip" en gardant lastYaw
+            yaw = lastYaw;
+            pitch = (dy > 0) ? -90.0 : 90.0; // si la cible est en dessous => regarder vers le bas
+        } else {
+            // yaw : angle dans le plan XZ (atan2(dx, dz))
+            yaw = Math.toDegrees(Math.atan2(dx, dz));
+            // pitch : angle entre horizontal et vecteur cible (negatif dy pour JavaFX Y vers le bas)
+            pitch = Math.toDegrees(Math.atan2(-dy, horiz));
+        }
+
+        yaw = normalizeAngle(yaw);
+        pitch = normalizeAngle(pitch);
+
+
+        rotateY.setAngle(yaw);
+        rotateX.setAngle(pitch);
+
+        lastYaw = yaw;
+        lastPitch = pitch;
+
+        // // debug
+        // System.out.println("=== Camera lookAt Debug ===");
+        // System.out.println("Camera Pos: " + cameraPos);
+        // System.out.println("Target Pos: " + target);
+        // System.out.println("dirVec: " + dirVec);
+        // System.out.printf("Computed yaw=%.3f pitch=%.3f -> applied rotateY=%.3f rotateX=%.3f%n",
+        //                 yaw, pitch, rotateY.getAngle(), rotateX.getAngle());
+        // System.out.println("===========================");
     }
+
+    private double normalizeAngle(double a) {
+        while (a <= -180) a += 360;
+        while (a > 180) a -= 360;
+        return a;
+    }
+
+
+
+
+
+
+
 
     @Override
     public void start(Stage primaryStage) {
@@ -276,7 +346,7 @@ public class App extends Application {
             Color.YELLOW
         );
         soleil.position = new Point3D(WIDTH / 2, HEIGHT / 2, 0);
-        soleil.renderAstreSansTrajectoire();
+        soleil.renderAstreSansTrajectoire(false);
 
         // Création de toutes les planètes avec leurs paramètres orbitaux 3D complets
 
@@ -402,7 +472,7 @@ public class App extends Application {
         public void handle(long now) {
             double deltaT = (now - lastTime) / 1_000_000_000.0;
             lastTime = now;
-            time += deltaT / 1000; // Vitesse d'animation
+            time += deltaT / 50; // Vitesse d'animation
 
             // Mise à jour des positions des planètes
             mercure.updatePosition(time, SCALE_DISTANCE, soleil.position);
@@ -414,23 +484,23 @@ public class App extends Application {
             uranus.updatePosition(time, SCALE_DISTANCE, soleil.position);
             neptune.updatePosition(time, SCALE_DISTANCE, soleil.position);
 
-            if (now - lastPrintTime > 5_000_000_000L) { // Toutes les 5 secondes
+            if (now - lastPrintTime > 5_000_000_00L) { // Toutes les 5 secondes
                 affPos();
-                printCameraPosition();
+                // printCameraPosition();
                 lastPrintTime = now;
             }
 
             
             
             
-            mercure.renderAstreSansTrajectoire();
-            venus.renderAstreSansTrajectoire();
-            terre.renderAstreSansTrajectoire();
-            mars.renderAstreSansTrajectoire();
-            jupiter.renderAstreSansTrajectoire();
-            saturne.renderAstreSansTrajectoire();
-            uranus.renderAstreSansTrajectoire();
-            neptune.renderAstreSansTrajectoire();
+            mercure.renderAstreSansTrajectoire(doTrajectotyRender);
+            venus.renderAstreSansTrajectoire(doTrajectotyRender);
+            terre.renderAstreSansTrajectoire(doTrajectotyRender);
+            mars.renderAstreSansTrajectoire(doTrajectotyRender);
+            jupiter.renderAstreSansTrajectoire(doTrajectotyRender);
+            saturne.renderAstreSansTrajectoire(doTrajectotyRender);
+            uranus.renderAstreSansTrajectoire(doTrajectotyRender);
+            neptune.renderAstreSansTrajectoire(doTrajectotyRender);
             
         }
     }.start();
@@ -441,6 +511,7 @@ public class App extends Application {
 
     public void affPos() {
         System.out.println("=== POSITIONS DES PLANÈTES (en pixels) ===");
+        System.out.println(soleil.toString());
         System.out.println(mercure.toString());
         System.out.println(venus.toString());
         System.out.println(terre.toString());
@@ -452,30 +523,5 @@ public class App extends Application {
 
 
         System.out.println("===============================");
-    }
-
-    // Méthode pour récupérer toutes les coordonnées formatées de la caméra
-    public String getCameraCoordinates() {
-        return String.format("Position: (%.2f, %.2f, %.2f) - Rotation: (%.2f°, %.2f°)",
-                           camera.getTranslateX(), camera.getTranslateY(), camera.getTranslateZ(),
-                           rotateX.getAngle(), rotateY.getAngle());
-    }
-
-    // Méthode pour afficher les coordonnées de la caméra
-    public void printCameraPosition() {
-        System.out.println("=== COORDONNÉES CAMÉRA ===");
-        System.out.println(getCameraCoordinates());
-        System.out.println("==========================");
-    }
-
-    // Méthode pour réinitialiser la vue
-    public void resetCamera() {
-        rotateX.setAngle(0);
-        rotateY.setAngle(0);
-        camera.setTranslateX(WIDTH / 2);
-        camera.setTranslateY(HEIGHT / 2);
-        camera.setTranslateZ(-500);
-        System.out.println("Caméra réinitialisée !");
-        printCameraPosition();
     }
 }

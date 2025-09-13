@@ -59,10 +59,10 @@ public class OrbitePlanete {
             double zFinal = z;
             
             // Debug occasionnel
-            if (Math.random() < 0.001) {
-                System.out.printf("Position calculée: r=%.3f UA, theta=%.1f°%n", 
-                                r, Math.toDegrees(theta));
-            }
+            // if (Math.random() < 0.001) {
+            //     System.out.printf("Position calculée: r=%.3f UA, theta=%.1f°%n", 
+            //                     r, Math.toDegrees(theta));
+            // }
             
             return new double[]{xFinal, yFinal, zFinal}; // Position en UA
         }
