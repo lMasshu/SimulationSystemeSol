@@ -171,9 +171,6 @@ public class App extends Application {
                     camera.setTranslateX(camera.getTranslateX() - right.getX() * moveSpeed);
                     camera.setTranslateZ(camera.getTranslateZ() - right.getZ() * moveSpeed);
                     break;
-                case R:
-                    // resetCamera();
-                    break;
                 case SPACE:
                     // Move camera up (positive Y direction)
                     camera.setTranslateY(camera.getTranslateY() - moveSpeed);
@@ -206,6 +203,11 @@ public class App extends Application {
                 case DIGIT8:
                     positionCameraBehindPlanet(neptune.position, soleil.position, rayonNeptune);
                     break;
+                case R:
+                    initCamera(scene);
+                    break;
+                case T:
+                    doTrajectotyRender = true;
             }
             event.consume();
         });
@@ -228,8 +230,8 @@ public class App extends Application {
         camera.getTransforms().addAll(rotateY, rotateX);
 
         // orientation de départ demandée
-        rotateY.setAngle(-90.0); // yaw initial
-        rotateX.setAngle(90.0);  // pitch initial
+        rotateY.setAngle(0.0); // yaw initial
+        rotateX.setAngle(0.0);  // pitch initial
 
         camera.setTranslateX(WIDTH / 2);
         camera.setTranslateY(HEIGHT / 2);
