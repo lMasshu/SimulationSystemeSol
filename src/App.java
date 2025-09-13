@@ -218,6 +218,7 @@ public class App extends Application {
     private double lastYaw = 0;
     private double lastPitch = 0;
     private static final double EPS = 1e-6;
+    private static final double PITCH_OFFSET = 90.0;
 
 
     private void initCamera(Scene scene) {
@@ -474,7 +475,7 @@ public class App extends Application {
         public void handle(long now) {
             double deltaT = (now - lastTime) / 1_000_000_000.0;
             lastTime = now;
-            time += deltaT / 50; // Vitesse d'animation
+            time += deltaT / 500; // Vitesse d'animation
 
             // Mise à jour des positions des planètes
             mercure.updatePosition(time, SCALE_DISTANCE, soleil.position);
