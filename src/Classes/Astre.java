@@ -92,7 +92,21 @@ public class Astre {
             pos[2] * SCALE_DISTANCE + soleilPosition.getZ()  // UA × pixels/UA + centre (pour la 3D)
         );
     }
-    
+
+    public void updatePositionAroundPlanet(double t, Point3D planetePosition, double SCALE_DISTANCE) {
+        double[] pos = orbite.calculerPosition(t);
+        
+        // La position est calculée par rapport à la planète, pas au Soleil
+        // On utilise une échelle différente car les distances planète-lune sont beaucoup plus petites
+        double echelleLunaire = SCALE_DISTANCE * 10; // Facteur 10 pour rendre la Lune visible
+        
+        this.position = new Point3D(
+            pos[0] * echelleLunaire + planetePosition.getX(),
+            pos[1] * echelleLunaire + planetePosition.getY(), 
+            pos[2] * echelleLunaire + planetePosition.getZ()
+        );
+    }
+        
     // // Affiche l'astre et sa trajectoire
     // public boolean renderAstreSansTrajectoire() {
     //     if (this.sprite == null) {

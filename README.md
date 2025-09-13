@@ -135,7 +135,7 @@ java -cp ".:path/to/javafx/lib/*" --module-path path/to/javafx/lib --add-modules
 
 ## Améliorations futures possibles
 
-- Ajout des lunes principales (Luna, Titan, Europa...)
+- Ajout des lunes principales (Titan, Europa...)
 - Intégration d'astéroïdes et comètes
 - Textures photoréalistes des planètes
 - Interface utilisateur avec données orbitales en temps réel
