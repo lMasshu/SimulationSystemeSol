@@ -12,7 +12,7 @@ import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.stage.Stage;
 
-public class App extends Application {
+public class SimulationSystemeSolaire extends Application {
     public final int WIDTH = 800;
     public final int HEIGHT = 600;
     public final double SCALE_DISTANCE = 150;    // 150 pixels = 1 UA

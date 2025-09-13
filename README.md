@@ -39,7 +39,7 @@ Ce projet est un **simulateur 3D interactif du système solaire** développé en
 
 ```
 src/
-├── App.java                 # Classe principale avec interface et contrôles
+├── SimulationSystemeSolaire.java                 # Classe principale avec interface et contrôles
 └── Classes/
     ├── Astre.java          # Représentation d'un corps céleste
     └── OrbitePlanete.java  # Calculs orbitaux et lois de Kepler
@@ -97,8 +97,8 @@ Développement d'un système de caméra sophistiqué :
 
 ### Lancement
 ```bash
-javac -cp "path/to/javafx/lib/*" App.java
-java -cp ".:path/to/javafx/lib/*" --module-path path/to/javafx/lib --add-modules javafx.controls,javafx.fxml App
+javac -cp "path/to/javafx/lib/*" SimulationSystemeSolaire.java
+java -cp ".:path/to/javafx/lib/*" --module-path path/to/javafx/lib --add-modules javafx.controls,javafx.fxml SimulationSystemeSolaire
 ```
 
 ### Contrôles
