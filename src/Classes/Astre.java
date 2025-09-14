@@ -133,7 +133,22 @@ public class Astre {
             pos[2] * echelleTitan + saturnePosition.getZ()
         );
     }
-            
+
+    public void updatePositionAroundPlanet(double t, Point3D planetPosition, double distanceMoyenne, double SCREEN_MAX_RADIUS) {
+        // Calcul de la position sur l'orbite (en unités réelles)
+        double[] pos = orbite.calculerPosition(t);
+
+        // Calcul dynamique de l'échelle
+        double echelle = SCREEN_MAX_RADIUS / distanceMoyenne;
+
+        // Mise à jour de la position en pixels
+        this.position = new Point3D(
+            pos[0] * echelle + planetPosition.getX(),
+            pos[1] * echelle + planetPosition.getY(),
+            pos[2] * echelle + planetPosition.getZ()
+        );
+    }
+                
     // // Affiche l'astre et sa trajectoire
     // public boolean renderAstreSansTrajectoire() {
     //     if (this.sprite == null) {

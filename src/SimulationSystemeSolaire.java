@@ -89,6 +89,8 @@ public class SimulationSystemeSolaire extends Application {
     double rayonUranus = (50724.0 / 2.0) / SCALE_DIAMETER;
     double rayonNeptune = (24622.0 / 2.0) / SCALE_DIAMETER;
     double rayonLune = (3474.8 / 2.0) / SCALE_DIAMETER;
+    double rayonEuropa = ( 3122 / 2.0 ) / SCALE_DIAMETER;
+    double rayonTitan = ( 5150 / 2.0 ) / SCALE_DIAMETER;
 
     // Paramètres approximatifs
     double perihelieEuropa = 670_900;       
@@ -231,7 +233,12 @@ public class SimulationSystemeSolaire extends Application {
                     positionCameraBehindPlanet(lune.position, terre.position, rayonLune);
                     break;
                 case DIGIT0:
-                    positionCameraBehindPlanet(europa.position, terre.position, rayonLune);
+                    positionCameraBehindPlanet(europa.position, soleil.position, rayonEuropa );
+                    break;
+                case M:
+                    if (titan != null) {
+                        positionCameraBehindPlanet(titan.position, saturne.position, rayonTitan);
+                    }
                     break;
                 case R:
                     initCamera(scene);
@@ -549,7 +556,7 @@ public class SimulationSystemeSolaire extends Application {
         public void handle(long now) {
             double deltaT = (now - lastTime) / 1_000_000_000.0;
             lastTime = now;
-            time += deltaT / 5000; // Vitesse d'animation
+            time += deltaT / 500; // Vitesse d'animation
 
             // Mise à jour des positions des planètes
             mercure.updatePosition(time, SCALE_DISTANCE, soleil.position);
@@ -561,8 +568,8 @@ public class SimulationSystemeSolaire extends Application {
             uranus.updatePosition(time, SCALE_DISTANCE, soleil.position);
             neptune.updatePosition(time, SCALE_DISTANCE, soleil.position);
             lune.updatePositionAroundTerre(time, terre.position,  SCALE_DISTANCE);
-            europa.updatePositionAroundJupiter(time, jupiter.position, SCALE_DISTANCE);
-            titan.updatePositionAroundSaturne(time, saturne.position, SCALE_DISTANCE);
+            europa.updatePositionAroundPlanet(time, jupiter.position, 670_900, 40); 
+            titan.updatePositionAroundPlanet(time, saturne.position, 1_222_000, 60); 
 
 
             if (now - lastPrintTime > 5_000_000_00L) { // Toutes les 5 secondes
@@ -571,9 +578,6 @@ public class SimulationSystemeSolaire extends Application {
                 lastPrintTime = now;
             }
 
-            
-            
-            
             mercure.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/mercure.png");
             venus.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/venus.png");
             terre.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/terre.png");
@@ -584,9 +588,7 @@ public class SimulationSystemeSolaire extends Application {
             neptune.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/neptune.png");
             lune.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/lune.png");
             titan.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/titan.png");
-            europa.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/europa.png");
-
-            
+            europa.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/europa.png"); 
         }
     }.start();
 
