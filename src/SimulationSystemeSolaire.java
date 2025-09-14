@@ -5,6 +5,7 @@ import javafx.geometry.Point3D;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Transform;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.stage.Stage;
@@ -17,6 +18,19 @@ public class SimulationSystemeSolaire extends Application {
     public final double SCALE_DIAMETER = 1e4;    // 10 000 km par pixel pour les diamètres
     public boolean Tpressed = false;
     public boolean doTrajectotyRender = false;
+
+    // Variables pour la gestion du temps
+    private double timeSpeed = 500.0;          // Facteur de vitesse par défaut
+    private boolean isPaused = false;          // État de pause
+    private final double MIN_SPEED = 1.0;      // Vitesse minimale
+    private final double MAX_SPEED = 50000.0;  // Vitesse maximale
+    private final double SPEED_MULTIPLIER = 1.5; // Facteur de multiplication
+
+    
+    // Variables pour la gestion de la caméra
+    private Point3D cameraForward = new Point3D(0, 0, 1);    // Direction "avant" de la caméra
+    private Point3D cameraRight = new Point3D(1, 0, 0);      // Direction "droite" de la caméra  
+    private Point3D cameraUp = new Point3D(0, 1, 0);         // Direction "haut" de la caméra
 
     // Périodes orbitales des planètes (en années terrestres)
     public double periodOrbitalMercure = 0.2408;
@@ -79,7 +93,6 @@ public class SimulationSystemeSolaire extends Application {
     public double argumentPerihelieNeptune = 276.336;
 
     // Rayon des planètes
-
     double rayonMercure = (4879.4 / 2.0) / SCALE_DIAMETER;
     double rayonVenus = (6051.8 * 2.0 / 2.0) / SCALE_DIAMETER;
     double rayonTerre = (12756.0 / 2.0) / SCALE_DIAMETER;
@@ -91,9 +104,6 @@ public class SimulationSystemeSolaire extends Application {
     double rayonLune = (3474.8 / 2.0) / SCALE_DIAMETER;
     double rayonEuropa = ( 3122 / 2.0 ) / SCALE_DIAMETER;
     double rayonTitan = ( 5150 / 2.0 ) / SCALE_DIAMETER;
-
-
-
 
     // Paramètres orbitaux de la Lune (par rapport à la Terre)
     public double periodOrbitalLune = 27.322 / 365.25; // 27.322 jours convertis en années
@@ -110,10 +120,6 @@ public class SimulationSystemeSolaire extends Application {
     double inclinaisonTitan = 0.3;          
     double longitudeNoeudTitan = 169.529;
     double argumentPerihelieTitan = 186.585;
-
-
-
-
 
     // **IO (Jupiter I)**
     double periapsideIo = 420_000 / 149597870.7;        // 0,002806 UA
@@ -202,12 +208,66 @@ public class SimulationSystemeSolaire extends Application {
     private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
     private double mousePosX, mousePosY;
     private double mouseOldX, mouseOldY;
+
+
+
     private Astre soleil, mercure, venus, terre, mars, jupiter, saturne, uranus, neptune;
-    private Astre lune, titan, europa, callisto, ganymede, io;
+    private Astre lune, titan, europa, callisto, ganymede, io, mimas, encelade, tethys, dione, rhea, iapetus;
 
     public static void main(String[] args) {
         launch(args);
     }
+
+    // Méthode pour calculer les vecteurs directionnels de la caméra
+        private void updateCameraDirections() {
+            // Récupérer la matrice de transformation de la caméra
+            Transform transform = camera.getLocalToSceneTransform();
+            
+            // Calculer le vecteur "avant" (direction où regarde la caméra)
+            // En JavaFX, l'axe Z négatif correspond à la direction "avant" de la caméra
+            Point3D forward = transform.deltaTransform(0, 0, -1).normalize();
+            
+            // Calculer le vecteur "droite" (perpendiculaire à la direction)
+            Point3D right = transform.deltaTransform(1, 0, 0).normalize();
+            
+            // Calculer le vecteur "haut" (perpendiculaire aux deux autres)
+            Point3D up = transform.deltaTransform(0, -1, 0).normalize();
+            
+            // Mettre à jour les directions
+            cameraForward = forward;
+            cameraRight = right;
+            cameraUp = up;
+        }
+
+        private void updateCameraDirectionsFromRotation() {
+            // Récupérer les angles de rotation de la caméra
+            double rotX = Math.toRadians(camera.getRotationAxis().getX()); 
+            double rotY = Math.toRadians(camera.getRotationAxis().getY());
+            double rotZ = Math.toRadians(camera.getRotationAxis().getZ());
+            
+            // Calculer la direction "avant" basée sur les rotations
+            double cosY = Math.cos(rotY);
+            double sinY = Math.sin(rotY);
+            double cosX = Math.cos(rotX);
+            double sinX = Math.sin(rotX);
+            
+            // Direction "avant" (où regarde la caméra)
+            cameraForward = new Point3D(
+                sinY * cosX,
+                -sinX,
+                -cosY * cosX
+            ).normalize();
+            
+            // Direction "droite" (perpendiculaire)
+            cameraRight = new Point3D(
+                Math.cos(rotY),
+                0,
+                Math.sin(rotY)
+            ).normalize();
+            
+            // Direction "haut" (produit vectoriel des deux autres)
+            cameraUp = cameraRight.crossProduct(cameraForward).normalize();
+        }
 
     // Configuration des contrôles de caméra
     private void setupCameraControls(Scene scene) {
@@ -255,36 +315,49 @@ public class SimulationSystemeSolaire extends Application {
         });
 
         scene.setOnKeyPressed(event -> {
-            double moveSpeed = 10.0;
-            Point3D direction = getCameraDirection();
-            Point3D right = direction.crossProduct(new Point3D(0, 1, 0)).normalize();
-            
+            double moveSpeed = 5.0;
+   
             switch (event.getCode()) {
-                case Z:
-                    camera.setTranslateX(camera.getTranslateX() + direction.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() + direction.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() + direction.getZ() * moveSpeed);
+                case Z: // Avancer (dans la direction où regarde la caméra)
+                    updateCameraDirections();
+                    camera.setTranslateX(camera.getTranslateX() - cameraForward.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() - cameraForward.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() - cameraForward.getZ() * moveSpeed);
                     break;
-                case S:
-                    camera.setTranslateX(camera.getTranslateX() - direction.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() - direction.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() - direction.getZ() * moveSpeed);
+                    
+                case S: // Reculer 
+                    updateCameraDirections();
+                    camera.setTranslateX(camera.getTranslateX() + cameraForward.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() + cameraForward.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() + cameraForward.getZ() * moveSpeed);
                     break;
-                case Q:
-                    camera.setTranslateX(camera.getTranslateX() + right.getX() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() + right.getZ() * moveSpeed);
+                    
+                case Q: // Aller à gauche (perpendiculaire à la direction)
+                    updateCameraDirections();
+                    camera.setTranslateX(camera.getTranslateX() - cameraRight.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() - cameraRight.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() - cameraRight.getZ() * moveSpeed);
                     break;
-                case D:
-                    camera.setTranslateX(camera.getTranslateX() - right.getX() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() - right.getZ() * moveSpeed);
+                    
+                case D: // Aller à droite
+                    updateCameraDirections();
+                    camera.setTranslateX(camera.getTranslateX() + cameraRight.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() + cameraRight.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() + cameraRight.getZ() * moveSpeed);
                     break;
-                case SPACE:
-                    // Move camera up (positive Y direction)
-                    camera.setTranslateY(camera.getTranslateY() - moveSpeed);
+                    
+                case SPACE: // Monter (dans la direction "haut" de la caméra)
+                    updateCameraDirections();
+                    camera.setTranslateX(camera.getTranslateX() + cameraUp.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() + cameraUp.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() + cameraUp.getZ() * moveSpeed);
                     break;
-                case CONTROL:
-                    // Move camera down (negative Y direction)
-                    camera.setTranslateY(camera.getTranslateY() + moveSpeed);
+                    
+                case CONTROL: // Descendre
+                    updateCameraDirections();
+                    camera.setTranslateX(camera.getTranslateX() - cameraUp.getX() * moveSpeed);
+                    camera.setTranslateY(camera.getTranslateY() - cameraUp.getY() * moveSpeed);
+                    camera.setTranslateZ(camera.getTranslateZ() - cameraUp.getZ() * moveSpeed);
                     break;
                 case DIGIT1:
                     positionCameraBehindPlanet(mercure.position, soleil.position, rayonMercure);
@@ -311,32 +384,44 @@ public class SimulationSystemeSolaire extends Application {
                     positionCameraBehindPlanet(neptune.position, soleil.position, rayonNeptune);
                     break;
                 case DIGIT9:
-                    positionCameraBehindPlanet(lune.position, terre.position, rayonLune);
+                    // On réduit le temps (ralentit l'animation)
+                    timeSpeed = Math.min(timeSpeed * SPEED_MULTIPLIER, MAX_SPEED);
+                    System.out.println("Vitesse réduite - Facteur: " + String.format("%.1f", timeSpeed));
                     break;
+
                 case DIGIT0:
-                    positionCameraBehindPlanet(europa.position, soleil.position, rayonEuropa );
+                    // On augmente le temps (accélère l'animation)
+                    timeSpeed = Math.max(timeSpeed / SPEED_MULTIPLIER, MIN_SPEED);
+                    System.out.println("Vitesse augmentée - Facteur: " + String.format("%.1f", timeSpeed));
                     break;
-                case M:
-                    if (titan != null) {
-                        positionCameraBehindPlanet(titan.position, saturne.position, rayonTitan);
-                    }
-                    break;
-
-                case MINUS:
-                    //on réduit le temps
-                    break;
-
-                case PLUS:
-                    //on augmante le temps
-                    break;
+                    
                 case ENTER:
-                    //on stop le temps
+                    // On stop/reprend le temps
+                    isPaused = !isPaused;
+                    System.out.println(isPaused ? "⏸️ Simulation en PAUSE" : "▶️ Simulation REPRISE");
                     break;
                 case R:
                     initCamera(scene);
                     break;
                 case T:
                     doTrajectotyRender = true;
+                    break;
+                case G:
+                    doTrajectotyRender = false;
+                    
+                    mercure.resetTrajectory();
+                    venus.resetTrajectory();
+                    terre.resetTrajectory();
+                    mars.resetTrajectory();
+                    jupiter.resetTrajectory();
+                    saturne.resetTrajectory();
+                    uranus.resetTrajectory();
+                    neptune.resetTrajectory();
+
+
+
+                    break;
+                    
             }
             event.consume();
         });
@@ -638,7 +723,7 @@ public class SimulationSystemeSolaire extends Application {
             Color.LIGHTGRAY
         );
 
-       Astre io = new Astre(
+        io = new Astre(
             "Io",
             8.93e22,
             3643 / SCALE_DIAMETER,
@@ -652,56 +737,56 @@ public class SimulationSystemeSolaire extends Application {
             Color.YELLOW
         );
 
-        Astre ganymede = new Astre(
+        ganymede = new Astre(
             "Ganymède", 1.4819e23, 5262 / SCALE_DIAMETER,
             periapsideGanymede, apoapsideGanymede, periodeOrbitaleGanymede,
             inclinaisonGanymede, longitudeNoeudGanymede, argumentPeriapsideGanymede,
             root, Color.GRAY
         );
 
-        Astre callisto = new Astre(
+        callisto = new Astre(
             "Callisto", 1.075938e23, 4820 / SCALE_DIAMETER,
             periapsideCallisto, apoapsideCallisto, periodeOrbitaleCallisto,
             inclinaisonCallisto, longitudeNoeudCallisto, argumentPeriapsideCallisto,
             root, Color.DARKGRAY
         );
 
-        Astre mimas = new Astre(
+        mimas = new Astre(
             "Mimas", 3.7493e19, 396 / SCALE_DIAMETER,
             periapsideMimas, apoapsideMimas, periodeOrbittraleMimas,
             inclinaisonMimas, longitudeNoeudMimas, argumentPeriapsideMimas,
             root, Color.LIGHTGRAY
         );
 
-        Astre encelade = new Astre(
+        encelade = new Astre(
             "Encelade", 1.080318e20, 504 / SCALE_DIAMETER,
             periapsideEncelade, apoapsideEncelade, periodeOrbitraleEncelade,
             inclinaisonEncelade, longitudeNoeudEncelade, argumentPeriapsideEncelade,
             root, Color.WHITE
         );
 
-        Astre tethys = new Astre(
+        tethys = new Astre(
             "Téthys", 6.1745e20, 1066 / SCALE_DIAMETER,
             periapsideTethys, apoapsideTethys, periodeOrbitaleTethys,
             inclinaisonTethys, longitudeNoeudTethys, argumentPeriapsideTethys,
             root, Color.LIGHTGRAY
         );
 
-        Astre dione = new Astre(
+        dione = new Astre(
             "Dioné", 1.095452e21, 1123 / SCALE_DIAMETER,
             periapsideDione, apoapsideDione, periodeOrbitaleDione,
             inclinaisonDione, longitudeNoeudDione, argumentPeriapsideDione,
             root, Color.LIGHTGRAY
         );
 
-        Astre rhea = new Astre(
+        rhea = new Astre(
             "Rhéa", 2.306518e21, 1527 / SCALE_DIAMETER,
             periapsideRhea, apoapsideRhea, periodeOrbitraleRhea,
             inclinaisonRhea, longitudeNoeudRhea, argumentPeriapsideRhea,
             root, Color.LIGHTGRAY
         );
 
-        Astre iapetus = new Astre(
+        iapetus = new Astre(
             "Japet", 1.805635e21, 1469 / SCALE_DIAMETER,
             periapsideIapetus, apoapsideIapetus, periodeOrbitraleIapetus,
             inclinaisonIapetus, longitudeNoeudIapetus, argumentPeriapsideIapetus,
@@ -719,7 +804,10 @@ public class SimulationSystemeSolaire extends Application {
         public void handle(long now) {
             double deltaT = (now - lastTime) / 1_000_000_000.0;
             lastTime = now;
-            time += deltaT / 500; // Vitesse d'animation
+
+            if (!isPaused) {
+                time += deltaT / timeSpeed; // Application du facteur de vitesse
+            }
 
             double factorTerre = 10.0;
             double factorJupiter = 20.0;

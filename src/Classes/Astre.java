@@ -126,23 +126,6 @@ public class Astre {
             pos[2] * echelle + planetPosition.getZ()
         );
     }
-                
-    // // Affiche l'astre et sa trajectoire
-    // public boolean renderAstreSansTrajectoire() {
-    //     if (this.sprite == null) {
-    //         Sphere sphere = new Sphere(this.diametre / 2, 32);
-    //         sphere.setMaterial(this.material);
-    //         this.sprite = sphere;
-    //         root.getChildren().add(sphere);
-    //     }
-
-    //     // Mettre à jour seulement la position du sprite (pas de trajectoire)
-    //     this.sprite.setTranslateX(this.position.getX());
-    //     this.sprite.setTranslateY(this.position.getY());
-    //     this.sprite.setTranslateZ(this.position.getZ());
-
-    //     return true;
-    // }
 
    public boolean renderAstreSansTrajectoire(boolean traj, String texturePath) {
         try {

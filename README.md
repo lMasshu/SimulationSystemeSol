@@ -138,7 +138,6 @@ java -cp ".:path/to/javafx/lib/*" --module-path path/to/javafx/lib --add-modules
 - Intégration d'astéroïdes et comètes
 - Interface utilisateur avec données orbitales en temps réel
 - Mode "poursuite" avec caméra attachée aux planètes
-- Contrôles temporels (pause, vitesse variable, date précise)
 
 ---
 
