@@ -96,10 +96,11 @@ public class Astre {
         );
     }
 
-    public void updatePositionAroundTerre(double t, Point3D planetePosition, double SCALE_DISTANCE) {
+
+    public void updatePositionAroundAstre(double t, Point3D planetePosition, double SCALE_DISTANCE, double factor){
         double[] pos = orbite.calculerPosition(t);
         
-        double echelleLunaire = SCALE_DISTANCE * 10; // Facteur 10 pour rendre la Lune visible
+        double echelleLunaire = SCALE_DISTANCE * factor; // Facteur 10 pour rendre la Lune visible
         
         this.position = new Point3D(
             pos[0] * echelleLunaire + planetePosition.getX(),
@@ -108,31 +109,8 @@ public class Astre {
         );
     }
 
-    public void updatePositionAroundJupiter(double t, Point3D jupiterPosition, double SCALE_DISTANCE) {
-        double[] pos = orbite.calculerPosition(t);
 
-        // Réduction forte pour que Europa reste proche de Jupiter
-        double echelleEuropa = SCALE_DISTANCE * 0.05; // ajuste à l’œil
 
-        this.position = new Point3D(
-            pos[0] * echelleEuropa + jupiterPosition.getX(),
-            pos[1] * echelleEuropa + jupiterPosition.getY(),
-            pos[2] * echelleEuropa + jupiterPosition.getZ()
-        );
-    }
-
-    public void updatePositionAroundSaturne(double t, Point3D saturnePosition, double SCALE_DISTANCE) {
-        double[] pos = orbite.calculerPosition(t);
-
-        // Titan est loin → un peu plus grand qu’Europa
-        double echelleTitan = SCALE_DISTANCE * 0.1; // ajuste à l’œil
-
-        this.position = new Point3D(
-            pos[0] * echelleTitan + saturnePosition.getX(),
-            pos[1] * echelleTitan + saturnePosition.getY(),
-            pos[2] * echelleTitan + saturnePosition.getZ()
-        );
-    }
 
     public void updatePositionAroundPlanet(double t, Point3D planetPosition, double distanceMoyenne, double SCREEN_MAX_RADIUS) {
         // Calcul de la position sur l'orbite (en unités réelles)

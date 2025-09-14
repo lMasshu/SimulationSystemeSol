@@ -92,13 +92,8 @@ public class SimulationSystemeSolaire extends Application {
     double rayonEuropa = ( 3122 / 2.0 ) / SCALE_DIAMETER;
     double rayonTitan = ( 5150 / 2.0 ) / SCALE_DIAMETER;
 
-    // Paramètres approximatifs
-    double perihelieEuropa = 670_900;       
-    double aphelieEuropa = 670_900;         
-    double periodeOrbitaleEuropa = 3.551;  
-    double inclinaisonEuropa = 0.47;       
-    double longitudeNoeudEuropa = 219.106;
-    double argumentPerihelieEuropa = 88.970;
+
+
 
     // Paramètres orbitaux de la Lune (par rapport à la Terre)
     public double periodOrbitalLune = 27.322 / 365.25; // 27.322 jours convertis en années
@@ -109,12 +104,98 @@ public class SimulationSystemeSolaire extends Application {
     public double argumentPerigeeLune = 318.308; // Argument du périgée
 
     // Paramètres approximatifs
-    double perihelieTitan = 1_222_000;      // km, distance minimale Saturne-Titan
-    double aphelieTitan = 1_222_000;        // km, pour Titan orbite quasi circulaire
-    double periodeOrbitaleTitan = 15.945;   // jours
-    double inclinaisonTitan = 0.3;          // degrés par rapport au plan équatorial de Saturne
+    double perihelieTitan = 1_222_000 / 149597870.7;    // Conversion km -> UA
+    double aphelieTitan = 1_222_000 / 149597870.7;      // Conversion km -> UA
+    double periodeOrbitaleTitan = 15.945 / 365.25;  
+    double inclinaisonTitan = 0.3;          
     double longitudeNoeudTitan = 169.529;
     double argumentPerihelieTitan = 186.585;
+
+
+
+
+
+    // **IO (Jupiter I)**
+    double periapsideIo = 420_000 / 149597870.7;        // 0,002806 UA
+    double apoapsideIo = 423_400 / 149597870.7;         // 0,002829 UA
+    double periodeOrbitaleIo = 1.769 / 365.25;          // 0,004844 années
+    double inclinaisonIo = 0.036;                        // 0,036° (par rapport à l'équateur de Jupiter)
+    double longitudeNoeudIo = 43.977;                    // Longitude du nœud ascendant (J2000)
+    double argumentPeriapsideIo = 84.129;                // Argument du périapside (J2000)
+
+    // Paramètres Europa (Jupiter II)
+    double perihelieEuropa = 664_862 / 149597870.7;  // Périapside en UA
+    double aphelieEuropa = 676_938 / 149597870.7;    // Apoapside en UA         
+    double periodeOrbitaleEuropa = 3.551181 / 365.25; // Période plus précise
+    double inclinaisonEuropa = 0.469;                 // Valeur corrigée
+    double longitudeNoeudEuropa = 219.106;
+    double argumentPerihelieEuropa = 88.970;
+
+
+    // **GANYMEDE (Jupiter III)**
+    double periapsideGanymede = 1_069_008 / 149597870.7;  // 0,007145 UA
+    double apoapsideGanymede = 1_071_792 / 149597870.7;   // 0,007164 UA
+    double periodeOrbitaleGanymede = 7.1545529 / 365.25;  // 0,019589 années
+    double inclinaisonGanymede = 0.21;                     // 0,21° (par rapport à l'équateur de Jupiter)
+    double longitudeNoeudGanymede = 63.552;                // Longitude du nœud ascendant (J2000)
+    double argumentPeriapsideGanymede = 192.417;           // Argument du périapside (J2000)
+
+    // **CALLISTO (Jupiter IV)**
+    double periapsideCallisto = 1_869_000 / 149597870.7;  // 0,012490 UA
+    double apoapsideCallisto = 1_897_000 / 149597870.7;   // 0,012677 UA
+    double periodeOrbitaleCallisto = 16.6890184 / 365.25; // 0,045707 années
+    double inclinaisonCallisto = 0.192;                    // 0,192° (par rapport à l'équateur de Jupiter)
+    double longitudeNoeudCallisto = 298.848;               // Longitude du nœud ascendant (J2000)
+    double argumentPeriapsideCallisto = 52.643;            // Argument du périapside (J2000)
+
+    // Mimas
+    double periapsideMimas = 181_902 / 149597870.7;     // 0,001216 UA
+    double apoapsideMimas = 189_176 / 149597870.7;      // 0,001265 UA
+    double periodeOrbittraleMimas = 0.942 / 365.25;     // 0,00258 années
+    double inclinaisonMimas = 1.574;
+    double longitudeNoeudMimas = 139.771;
+    double argumentPeriapsideMimas = 333.877;
+
+    // Encelade
+    double periapsideEncelade = 236_918 / 149597870.7;   // 0,001584 UA
+    double apoapsideEncelade = 239_156 / 149597870.7;    // 0,001599 UA
+    double periodeOrbitraleEncelade = 1.370 / 365.25;    // 0,00375 années
+    double inclinaisonEncelade = 0.019;
+    double longitudeNoeudEncelade = 169.508;
+    double argumentPeriapsideEncelade = 13.456;
+
+    // Téthys
+    double periapsideTethys = 294_619 / 149597870.7;     // 0,001969 UA
+    double apoapsideTethys = 296_890 / 149597870.7;      // 0,001984 UA
+    double periodeOrbitaleTethys = 1.888 / 365.25;       // 0,00517 années
+    double inclinaisonTethys = 1.12;
+    double longitudeNoeudTethys = 167.789;
+    double argumentPeriapsideTethys = 262.334;
+
+    // Dioné
+    double periapsideDione = 376_566 / 149597870.7;      // 0,002517 UA
+    double apoapsideDione = 377_396 / 149597870.7;       // 0,002523 UA
+    double periodeOrbitaleDione = 2.737 / 365.25;        // 0,007496 années
+    double inclinaisonDione = 0.019;
+    double longitudeNoeudDione = 128.538;
+    double argumentPeriapsideDione = 91.796;
+
+    // Rhéa
+    double periapsideRhea = 527_039 / 149597870.7;       // 0,003522 UA
+    double apoapsideRhea = 527_363 / 149597870.7;        // 0,003524 UA
+    double periodeOrbitraleRhea = 4.518 / 365.25;        // 0,012373 années
+    double inclinaisonRhea = 0.345;
+    double longitudeNoeudRhea = 169.837;
+    double argumentPeriapsideRhea = 201.164;
+
+    // Japet
+    double periapsideIapetus = 3_460_820 / 149597870.7;  // 0,02313 UA
+    double apoapsideIapetus = 3_661_300 / 149597870.7;   // 0,02447 UA
+    double periodeOrbitraleIapetus = 79.330183 / 365.25; // 0,21725 années
+    double inclinaisonIapetus = 15.47;
+    double longitudeNoeudIapetus = 81.098;
+    double argumentPeriapsideIapetus = 271.606;
+
 
     private PerspectiveCamera camera;
     private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
@@ -122,7 +203,7 @@ public class SimulationSystemeSolaire extends Application {
     private double mousePosX, mousePosY;
     private double mouseOldX, mouseOldY;
     private Astre soleil, mercure, venus, terre, mars, jupiter, saturne, uranus, neptune;
-    private Astre lune, titan, europa;
+    private Astre lune, titan, europa, callisto, ganymede, io;
 
     public static void main(String[] args) {
         launch(args);
@@ -239,6 +320,17 @@ public class SimulationSystemeSolaire extends Application {
                     if (titan != null) {
                         positionCameraBehindPlanet(titan.position, saturne.position, rayonTitan);
                     }
+                    break;
+
+                case MINUS:
+                    //on réduit le temps
+                    break;
+
+                case PLUS:
+                    //on augmante le temps
+                    break;
+                case ENTER:
+                    //on stop le temps
                     break;
                 case R:
                     initCamera(scene);
@@ -546,6 +638,77 @@ public class SimulationSystemeSolaire extends Application {
             Color.LIGHTGRAY
         );
 
+       Astre io = new Astre(
+            "Io",
+            8.93e22,
+            3643 / SCALE_DIAMETER,
+            periapsideIo,
+            apoapsideIo,
+            periodeOrbitaleIo,
+            inclinaisonIo,
+            longitudeNoeudIo,
+            argumentPeriapsideIo,
+            root,
+            Color.YELLOW
+        );
+
+        Astre ganymede = new Astre(
+            "Ganymède", 1.4819e23, 5262 / SCALE_DIAMETER,
+            periapsideGanymede, apoapsideGanymede, periodeOrbitaleGanymede,
+            inclinaisonGanymede, longitudeNoeudGanymede, argumentPeriapsideGanymede,
+            root, Color.GRAY
+        );
+
+        Astre callisto = new Astre(
+            "Callisto", 1.075938e23, 4820 / SCALE_DIAMETER,
+            periapsideCallisto, apoapsideCallisto, periodeOrbitaleCallisto,
+            inclinaisonCallisto, longitudeNoeudCallisto, argumentPeriapsideCallisto,
+            root, Color.DARKGRAY
+        );
+
+        Astre mimas = new Astre(
+            "Mimas", 3.7493e19, 396 / SCALE_DIAMETER,
+            periapsideMimas, apoapsideMimas, periodeOrbittraleMimas,
+            inclinaisonMimas, longitudeNoeudMimas, argumentPeriapsideMimas,
+            root, Color.LIGHTGRAY
+        );
+
+        Astre encelade = new Astre(
+            "Encelade", 1.080318e20, 504 / SCALE_DIAMETER,
+            periapsideEncelade, apoapsideEncelade, periodeOrbitraleEncelade,
+            inclinaisonEncelade, longitudeNoeudEncelade, argumentPeriapsideEncelade,
+            root, Color.WHITE
+        );
+
+        Astre tethys = new Astre(
+            "Téthys", 6.1745e20, 1066 / SCALE_DIAMETER,
+            periapsideTethys, apoapsideTethys, periodeOrbitaleTethys,
+            inclinaisonTethys, longitudeNoeudTethys, argumentPeriapsideTethys,
+            root, Color.LIGHTGRAY
+        );
+
+        Astre dione = new Astre(
+            "Dioné", 1.095452e21, 1123 / SCALE_DIAMETER,
+            periapsideDione, apoapsideDione, periodeOrbitaleDione,
+            inclinaisonDione, longitudeNoeudDione, argumentPeriapsideDione,
+            root, Color.LIGHTGRAY
+        );
+
+        Astre rhea = new Astre(
+            "Rhéa", 2.306518e21, 1527 / SCALE_DIAMETER,
+            periapsideRhea, apoapsideRhea, periodeOrbitraleRhea,
+            inclinaisonRhea, longitudeNoeudRhea, argumentPeriapsideRhea,
+            root, Color.LIGHTGRAY
+        );
+
+        Astre iapetus = new Astre(
+            "Japet", 1.805635e21, 1469 / SCALE_DIAMETER,
+            periapsideIapetus, apoapsideIapetus, periodeOrbitraleIapetus,
+            inclinaisonIapetus, longitudeNoeudIapetus, argumentPeriapsideIapetus,
+            root, Color.DARKGRAY
+        );
+
+
         // Animation des orbites
         new AnimationTimer() {
         private long lastTime = System.nanoTime();
@@ -558,6 +721,10 @@ public class SimulationSystemeSolaire extends Application {
             lastTime = now;
             time += deltaT / 500; // Vitesse d'animation
 
+            double factorTerre = 10.0;
+            double factorJupiter = 20.0;
+            double factorSaturne = 15.0;
+
             // Mise à jour des positions des planètes
             mercure.updatePosition(time, SCALE_DISTANCE, soleil.position);
             venus.updatePosition(time, SCALE_DISTANCE, soleil.position);
@@ -567,9 +734,20 @@ public class SimulationSystemeSolaire extends Application {
             saturne.updatePosition(time, SCALE_DISTANCE, soleil.position);
             uranus.updatePosition(time, SCALE_DISTANCE, soleil.position);
             neptune.updatePosition(time, SCALE_DISTANCE, soleil.position);
-            lune.updatePositionAroundTerre(time, terre.position,  SCALE_DISTANCE);
-            europa.updatePositionAroundPlanet(time, jupiter.position, 670_900, 40); 
-            titan.updatePositionAroundPlanet(time, saturne.position, 1_222_000, 60); 
+
+            //Mise à jour des positions des satélites
+            lune.updatePositionAroundAstre(time, terre.position,  SCALE_DISTANCE, factorTerre);
+            europa.updatePositionAroundAstre(time, jupiter.position, SCALE_DISTANCE, factorJupiter); 
+            io.updatePositionAroundAstre(time, jupiter.position, SCALE_DISTANCE, factorJupiter);
+            ganymede.updatePositionAroundAstre(time, jupiter.position, SCALE_DISTANCE, factorJupiter);
+            callisto.updatePositionAroundAstre(time, jupiter.position, SCALE_DISTANCE, factorJupiter);
+            titan.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne); 
+            dione.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
+            iapetus.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
+            rhea.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
+            encelade.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
+            tethys.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
+            
 
 
             if (now - lastPrintTime > 5_000_000_00L) { // Toutes les 5 secondes
@@ -578,6 +756,7 @@ public class SimulationSystemeSolaire extends Application {
                 lastPrintTime = now;
             }
 
+            // Rendering des planètes
             mercure.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/mercure.png");
             venus.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/venus.png");
             terre.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/terre.png");
@@ -586,9 +765,21 @@ public class SimulationSystemeSolaire extends Application {
             saturne.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/saturne.png");
             uranus.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/uranus.png");
             neptune.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/neptune.png");
-            lune.renderAstreSansTrajectoire(doTrajectotyRender,"/resources/textures/lune.png");
-            titan.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/titan.png");
-            europa.renderAstreSansTrajectoire(doTrajectotyRender, "/resources/textures/europa.png"); 
+
+            // Rendering des Sattélites 
+            lune.renderAstreSansTrajectoire(false,"/resources/textures/lune.png");
+            io.renderAstreSansTrajectoire(false, "/resources/textures/io.png");
+            ganymede.renderAstreSansTrajectoire(false, "/resources/textures/ganymede.png");
+            callisto.renderAstreSansTrajectoire(false, "/resources/textures/callisto.png");
+            europa.renderAstreSansTrajectoire(false, "/resources/textures/europa.png"); 
+            titan.renderAstreSansTrajectoire(false, "/resources/textures/titan.png");
+            tethys.renderAstreSansTrajectoire(false, "/resources/textures/tethys.png");
+            encelade.renderAstreSansTrajectoire(false, "/resources/textures/encelade.png");
+            rhea.renderAstreSansTrajectoire(false, "/resources/textures/rhea.png");
+            iapetus.renderAstreSansTrajectoire(false, "/resources/textures/iapetus.png");
+            dione.renderAstreSansTrajectoire(false, "/resources/textures/dione.png");
+
+
         }
     }.start();
 
