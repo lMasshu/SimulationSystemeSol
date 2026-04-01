@@ -10,6 +10,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
+import Classes.CameraController;
 import javafx.stage.Stage;
 
 
@@ -30,9 +31,8 @@ public class SimulationSystemeSolaire extends Application {
 
     
     // Variables pour la gestion de la caméra
-    private Point3D cameraForward = new Point3D(0, 0, 1);    // Direction "avant" de la caméra
-    private Point3D cameraRight = new Point3D(1, 0, 0);      // Direction "droite" de la caméra  
-    private Point3D cameraUp = new Point3D(0, 1, 0);         // Direction "haut" de la caméra
+    private PerspectiveCamera camera;
+    private CameraController cameraController;
 
     // Périodes orbitales des planètes (en années terrestres)
     public double periodOrbitalMercure = 0.2408;
@@ -205,14 +205,6 @@ public class SimulationSystemeSolaire extends Application {
     double argumentPeriapsideIapetus = 271.606;
 
 
-    private PerspectiveCamera camera;
-    private final Rotate rotateX = new Rotate(0, Rotate.X_AXIS);
-    private final Rotate rotateY = new Rotate(0, Rotate.Y_AXIS);
-    private double mousePosX, mousePosY;
-    private double mouseOldX, mouseOldY;
-
-
-
     private Astre soleil, mercure, venus, terre, mars, jupiter, saturne, uranus, neptune;
     private Astre lune, titan, europa, callisto, ganymede, io, mimas, encelade, tethys, dione, rhea, iapetus;
 
@@ -220,142 +212,33 @@ public class SimulationSystemeSolaire extends Application {
         launch(args);
     }
 
-    // Méthode pour calculer les vecteurs directionnels de la caméra
-    private void updateCameraDirections() {
-        // Récupérer la matrice de transformation de la caméra
-        Transform transform = camera.getLocalToSceneTransform();
-        
-        // Calculer le vecteur "avant" (direction où regarde la caméra)
-        // En JavaFX, l'axe Z négatif correspond à la direction "avant" de la caméra
-        Point3D forward = transform.deltaTransform(0, 0, -1).normalize();
-        
-        // Calculer le vecteur "droite" (perpendiculaire à la direction)
-        Point3D right = transform.deltaTransform(1, 0, 0).normalize();
-        
-        // Calculer le vecteur "haut" (perpendiculaire aux deux autres)
-        Point3D up = transform.deltaTransform(0, -1, 0).normalize();
-        
-        // Mettre à jour les directions
-        cameraForward = forward;
-        cameraRight = right;
-        cameraUp = up;
-    }
-
-    
-
-    // Configuration des contrôles de caméra
-    private void setupCameraControls(Scene scene) {
-        // Mouse scroll for zoom
-        scene.setOnScroll(event -> {
-            double zoomSpeed = 50.0;
-            Point3D direction = getCameraDirection();
-            
-            if (event.getDeltaY() > 0) {
-                // Scroll up - zoom in (move forward)
-                camera.setTranslateX(camera.getTranslateX() + direction.getX() * zoomSpeed);
-                camera.setTranslateY(camera.getTranslateY() + direction.getY() * zoomSpeed);
-                camera.setTranslateZ(camera.getTranslateZ() + direction.getZ() * zoomSpeed);
-            } else {
-                // Scroll down - zoom out (move backward)
-                camera.setTranslateX(camera.getTranslateX() - direction.getX() * zoomSpeed);
-                camera.setTranslateY(camera.getTranslateY() - direction.getY() * zoomSpeed);
-                camera.setTranslateZ(camera.getTranslateZ() - direction.getZ() * zoomSpeed);
-            }
-            event.consume();
-        });
-
-        scene.setOnMousePressed(event -> {
-            if (event.isSecondaryButtonDown()) {
-                mousePosX = event.getSceneX();
-                mousePosY = event.getSceneY();
-                mouseOldX = event.getSceneX();
-                mouseOldY = event.getSceneY();
-            }
-        });
-
-        scene.setOnMouseDragged(event -> {
-            if (event.isSecondaryButtonDown()) {
-                mouseOldX = mousePosX;
-                mouseOldY = mousePosY;
-                mousePosX = event.getSceneX();
-                mousePosY = event.getSceneY();
-                double mouseDeltaX = (mousePosX - mouseOldX);
-                double mouseDeltaY = (mousePosY - mouseOldY);
-                double modifier = 0.05;
-                double invertX = (camera.getTranslateZ() > 0) ? -1 : 1;
-                rotateY.setAngle(rotateY.getAngle() - mouseDeltaX * modifier);
-                rotateX.setAngle(rotateX.getAngle() + mouseDeltaY * modifier * invertX);
-            }
-        });
-
+    // Configuration des contrôles de la scène principaux
+    private void setupSceneControls(Scene scene) {
         scene.setOnKeyPressed(event -> {
-            double moveSpeed = 5.0;
-   
             switch (event.getCode()) {
-                case Z: // Avancer (dans la direction où regarde la caméra)
-                    updateCameraDirections();
-                    camera.setTranslateX(camera.getTranslateX() - cameraForward.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() - cameraForward.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() - cameraForward.getZ() * moveSpeed);
-                    break;
-                    
-                case S: // Reculer 
-                    updateCameraDirections();
-                    camera.setTranslateX(camera.getTranslateX() + cameraForward.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() + cameraForward.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() + cameraForward.getZ() * moveSpeed);
-                    break;
-                    
-                case Q: // Aller à gauche (perpendiculaire à la direction)
-                    updateCameraDirections();
-                    camera.setTranslateX(camera.getTranslateX() - cameraRight.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() - cameraRight.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() - cameraRight.getZ() * moveSpeed);
-                    break;
-                    
-                case D: // Aller à droite
-                    updateCameraDirections();
-                    camera.setTranslateX(camera.getTranslateX() + cameraRight.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() + cameraRight.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() + cameraRight.getZ() * moveSpeed);
-                    break;
-                    
-                case SPACE: // Monter (dans la direction "haut" de la caméra)
-                    updateCameraDirections();
-                    camera.setTranslateX(camera.getTranslateX() + cameraUp.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() + cameraUp.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() + cameraUp.getZ() * moveSpeed);
-                    break;
-                    
-                case CONTROL: // Descendre
-                    updateCameraDirections();
-                    camera.setTranslateX(camera.getTranslateX() - cameraUp.getX() * moveSpeed);
-                    camera.setTranslateY(camera.getTranslateY() - cameraUp.getY() * moveSpeed);
-                    camera.setTranslateZ(camera.getTranslateZ() - cameraUp.getZ() * moveSpeed);
-                    break;
                 case DIGIT1:
-                    positionCameraBehindPlanet(mercure.position, soleil.position, rayonMercure);
+                    cameraController.focusOn(mercure, rayonMercure * SCALE_DISTANCE + 50);
                     break;
                 case DIGIT2:
-                    positionCameraBehindPlanet(venus.position, soleil.position, rayonVenus);
+                    cameraController.focusOn(venus, rayonVenus * SCALE_DISTANCE + 50);
                     break;
                 case DIGIT3:
-                    positionCameraBehindPlanet(terre.position, soleil.position, rayonTerre);
+                    cameraController.focusOn(terre, rayonTerre * SCALE_DISTANCE + 50);
                     break;
                 case DIGIT4:
-                    positionCameraBehindPlanet(mars.position, soleil.position, rayonMars);
+                    cameraController.focusOn(mars, rayonMars * SCALE_DISTANCE + 50);
                     break;
                 case DIGIT5:
-                    positionCameraBehindPlanet(jupiter.position, soleil.position, rayonJupiter);
+                    cameraController.focusOn(jupiter, rayonJupiter * SCALE_DISTANCE + 200);
                     break;
                 case DIGIT6:
-                    positionCameraBehindPlanet(saturne.position, soleil.position, rayonSaturne);
+                    cameraController.focusOn(saturne, rayonSaturne * SCALE_DISTANCE + 200);
                     break;
                 case DIGIT7:
-                    positionCameraBehindPlanet(uranus.position, soleil.position, rayonUranus);
+                    cameraController.focusOn(uranus, rayonUranus * SCALE_DISTANCE + 100);
                     break;
                 case DIGIT8:
-                    positionCameraBehindPlanet(neptune.position, soleil.position, rayonNeptune);
+                    cameraController.focusOn(neptune, rayonNeptune * SCALE_DISTANCE + 100);
                     break;
                 case DIGIT9:
                     // On réduit le temps (ralentit l'animation)
@@ -414,102 +297,20 @@ public class SimulationSystemeSolaire extends Application {
         camera.setNearClip(0.1);
         camera.setFarClip(100000.0);
 
-        // IMPORTANT : ordre = yaw (Y) puis pitch (X)
-        camera.getTransforms().clear();
-        camera.getTransforms().addAll(rotateY, rotateX);
-
-        // orientation de départ demandée
-        rotateY.setAngle(0.0); // yaw initial
-        rotateX.setAngle(0.0);  // pitch initial
-
-        camera.setTranslateX(WIDTH / 2);
-        camera.setTranslateY(HEIGHT / 2);
-        camera.setTranslateZ(-500); // garde un Z initial hors du plan z=0
+        camera.setTranslateX(0);
+        camera.setTranslateY(0);
+        camera.setTranslateZ(-500); 
         scene.setCamera(camera);
-    }
-
-    private Point3D getCameraDirection() {
-        Point3D forward = new Point3D(0, 0, 1);
-        forward = rotateY.transform(forward);
-        forward = rotateX.transform(forward);
-        return forward.normalize();
-    }
-
-
-    private void positionCameraBehindPlanet(Point3D planetPos, Point3D sunPos, double planetRadius) {
-        Point3D sunToPlanet = planetPos.subtract(sunPos);
-        if (sunToPlanet.magnitude() < EPS) return;
-
-        Point3D dir = sunToPlanet.normalize();
-
-
-
-        double cameraDistance = planetRadius + 20;
-
-        Point3D cameraPos = planetPos.add(dir.multiply(cameraDistance));
-
-        camera.setTranslateX(cameraPos.getX());
-        camera.setTranslateY(cameraPos.getY());
-        camera.setTranslateZ(cameraPos.getZ());
-
-        // Regarder le Soleil (ou planetPos selon le comportement voulu)
-        lookAt(sunPos);
-    }
-
-
-    private void lookAt(Point3D target) {
-        Point3D cameraPos = new Point3D(
-            camera.getTranslateX(),
-            camera.getTranslateY(),
-            camera.getTranslateZ()
-        );
-
-        Point3D dirVec = target.subtract(cameraPos);
-        double dx = dirVec.getX();
-        double dy = dirVec.getY();
-        double dz = dirVec.getZ();
-
-        double horiz = Math.hypot(dx, dz); // longueur projection sur XZ
-
-        double yaw;
-        double pitch;
-
-        if (horiz < EPS) {
-            // caméra directement au-dessus/en-dessous : on évite le "flip" en gardant lastYaw
-            yaw = lastYaw;
-            pitch = (dy > 0) ? -90.0 : 90.0; // si la cible est en dessous => regarder vers le bas
+        
+        if (cameraController == null) {
+            cameraController = new CameraController(camera);
+            cameraController.setupControls(scene);
         } else {
-            // yaw : angle dans le plan XZ (atan2(dx, dz))
-            yaw = Math.toDegrees(Math.atan2(dx, dz));
-            // pitch : angle entre horizontal et vecteur cible (negatif dy pour JavaFX Y vers le bas)
-            pitch = Math.toDegrees(Math.atan2(-dy, horiz));
+            cameraController.detach();
+            cameraController.setPositionAndLookAt(new Point3D(0, 0, -500), new Point3D(0, 0, 0));
         }
-
-        yaw = normalizeAngle(yaw);
-        pitch = normalizeAngle(pitch);
-
-
-        rotateY.setAngle(yaw);
-        rotateX.setAngle(pitch);
-
-        lastYaw = yaw;
-        lastPitch = pitch;
-
-        // // debug
-        // System.out.println("=== Camera lookAt Debug ===");
-        // System.out.println("Camera Pos: " + cameraPos);
-        // System.out.println("Target Pos: " + target);
-        // System.out.println("dirVec: " + dirVec);
-        // System.out.printf("Computed yaw=%.3f pitch=%.3f -> applied rotateY=%.3f rotateX=%.3f%n",
-        //                 yaw, pitch, rotateY.getAngle(), rotateX.getAngle());
-        // System.out.println("===========================");
     }
 
-    private double normalizeAngle(double a) {
-        while (a <= -180) a += 360;
-        while (a > 180) a -= 360;
-        return a;
-    }
 
     @Override
     public void start(Stage primaryStage) {
@@ -535,7 +336,7 @@ public class SimulationSystemeSolaire extends Application {
             scene.setFill(texturePattern);
 
             initCamera(scene);
-            setupCameraControls(scene);
+            setupSceneControls(scene);
 
         // Création du Soleil
         double diamètreSoleil = 1.3927e6;
@@ -547,7 +348,7 @@ public class SimulationSystemeSolaire extends Application {
             root,
             Color.YELLOW
         );
-        soleil.position = new Point3D(WIDTH / 2, HEIGHT / 2, 0);
+        soleil.position = new Point3D(0, 0, 0);
         soleil.renderAstreSansTrajectoire(false, "/resources/textures/soleil.png");
 
         // Création de toutes les planètes avec leurs paramètres orbitaux 3D complets
@@ -821,7 +622,9 @@ public class SimulationSystemeSolaire extends Application {
             encelade.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
             tethys.updatePositionAroundAstre(time, saturne.position, SCALE_DISTANCE, factorSaturne);
             
-
+            if (cameraController != null) {
+                cameraController.update();
+            }
 
             if (now - lastPrintTime > 5_000_000_00L) { // Toutes les 5 secondes
                 affPos();

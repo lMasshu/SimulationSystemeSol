@@ -146,10 +146,10 @@ public class Astre {
                 } else {
                     material.setDiffuseColor(Color.GRAY); // fallback
                 }
-
                 sphere.setMaterial(material);
                 this.material = material; // garder référence
                 this.sprite = sphere;
+                this.sprite.setUserData(this); // Utilisé par CameraController pour le Raycasting (clic sur planète)
                 root.getChildren().add(sphere);
                 this.previousPosition = this.position; // Initialiser la position précédente
             }
