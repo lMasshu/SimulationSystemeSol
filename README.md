@@ -19,14 +19,24 @@ Ce projet est un **simulateur 3D interactif du système solaire** développé en
 - **Périodes orbitales** proportionnelles aux véritables durées
 - **Résolution de l'équation de Kepler** pour des positions précises
 
-###  Contrôles interactifs
-- **Navigation 3D** : rotation avec clic droit + glisser
-- **Zoom** : molette de souris pour s'approcher/s'éloigner
-- **Déplacement** : touches ZQSD pour naviguer
-- **Élévation** : Espace (monter) / Ctrl (descendre)
-- **Suivi de planètes** : touches 1-8 pour se positionner derrière chaque planète
-- **Reset caméra** : touche R pour revenir à la vue d'ensemble
-- **Trajectoires** : touche T pour afficher les traces orbitales
+###  Contrôles interactifs (Caméra Simulateur Spatial)
+- **Navigation Vol Libre** :
+  - Déplacement inertiel (ZQSD)
+  - Panning (Clic gauche ou milieu + glisser)
+  - Orientation / Tourner la tête (Clic droit + glisser)
+  - Altitude (Espace pour monter, Ctrl pour descendre)
+  - Vitesse x10 (Maintenir Maj/Shift)
+- **Mode Orbite & Focus** :
+  - **Clic GAUCHE sur une planète** pour s'y arrimer automatiquement (transition fluide).
+  - Touches **1-8** ou **clic** pour verrouiller une cible.
+  - **Molette** en orbite pour s'approcher précisément de la surface ou s'éloigner.
+  - Appuyer sur une touche de mouvement (ZQSD) pour quitter l'orbite et repartir dans le vide.
+- **Réglage du Temps** :
+  - `9` et `0` pour ralentir/accélérer le temps de la simulation.
+  - `Entrée` pour mettre en pause.
+- **Autres** :
+  - **R** : Reset caméra
+  - **T/G** : Afficher ou cacher les trajectoires
 
 ###  Rendu visuel
 - **Proportions réalistes** (avec facteurs d'échelle adaptés)
@@ -61,11 +71,11 @@ Intégration des paramètres orbitaux officiels pour chaque planète :
 - Inclinaison orbitale (angle par rapport à l'écliptique)
 - Longitude du nœud ascendant et argument du périhélie
 
-#### 3. **Interface 3D interactive** 
-Développement d'un système de caméra sophistiqué :
-- **Navigation libre** dans l'espace 3D
-- **Suivi automatique** des planètes avec positionnement optimal
-- **Contrôles intuitifs** inspirés des logiciels de modélisation 3D
+#### 3. **Interface 3D et Moteur de Caméra Spatiale** 
+Développement d'un contrôleur de caméra (CameraController) de type "Simulateur Spatial" :
+- **Navigation Libre (Free-Fly)** avec inertie, accélération et glissement spatial fluide.
+- **Mouse Picking 3D** permettant de cliquer sur les planètes pour déclencher des actions orbitalles.
+- **Mode Focus Orbital** avec des transitions mathématiques (Ease-in-out) pour arrimer la caméra à des astres en mouvement rapide.
 
 #### 4. **Optimisation et rendu** 
 - **Animation fluide** avec `AnimationTimer`
@@ -102,14 +112,28 @@ java -cp ".:path/to/javafx/lib/*" --module-path path/to/javafx/lib --add-modules
 ```
 
 ### Contrôles
-- **Clic droit + glisser** : Rotation de la caméra
-- **Molette** : Zoom avant/arrière
-- **Z/S** : Avancer/reculer
-- **Q/D** : Gauche/droite
-- **Espace/Ctrl** : Haut/bas
-- **1-8** : Suivre les planètes (1=Mercure, 8=Neptune)
-- **R** : Reset caméra
-- **T** : Afficher les trajectoires
+
+**Mode Vol Libre (Free Fly) :**
+- **Z / S** : Avancer / Reculer
+- **Q / D** : Gauche / Droite
+- **Espace / Ctrl** : Monter / Descendre (absolu)
+- **Clic Droit + Glisser** : Tourner la tête librement
+- **Clic Gauche / Milieu + Glisser** : Panning (déplacement latéral)
+- **Molette** : Vitesse propulsive dans l'axe du regard
+- **Shift (Maintenu)** : Multiplicateur x10 de vitesse de navigation
+
+**Mode Focus (Orbite) :**
+- **Clic Gauche sur une planète** : Verrouillage et focus sur l'Astre (Mouse Picking)
+- **Touches 1 à 8** : S'arrimer directement sur une planète (1=Mercure, 8=Neptune)
+- **Clic Droit + Glisser** : Tourner autour de la planète en orbite
+- **Molette** : Changer le rayon de l'orbite (zoom précis)
+- *Appuyer sur n'importe quelle touche (Z,Q,S,D...) pour briser l'orbite et repasser en vol libre.*
+
+**Simulation :**
+- **Entrée** : Pause / Lecture
+- **9 / 0** : Ralentir / Accélérer l'écoulement du temps
+- **R** : Reset de la caméra (retour à l'origine)
+- **T / G** : Afficher / Cacher les trajectoires orbitales
 
 ## Défis techniques relevés
 
@@ -135,9 +159,9 @@ java -cp ".:path/to/javafx/lib/*" --module-path path/to/javafx/lib --add-modules
 
 ## Améliorations futures possibles
 
-- Intégration d'astéroïdes et comètes
-- Interface utilisateur avec données orbitales en temps réel
-- Mode "poursuite" avec caméra attachée aux planètes
+- Intégration d'astéroïdes et comètes, incluant la ceinture de Kuiper.
+- Interface utilisateur (UI) avec Overlay des planètes et données orbitales en temps réel.
+- Implémentation d'un système d'ombrage (Shadow rendering) dynamique par le Soleil.
 
 ---
 
