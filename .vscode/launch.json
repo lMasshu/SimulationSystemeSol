@@ -6,7 +6,7 @@
             "name": "Lancer SimulationSystemeSolaire (JavaFX)",
             "request": "launch",
             "mainClass": "SimulationSystemeSolaire",
-            "vmArgs": "--module-path \"c:/Users/lefeu/Desktop/javaFX/javafx-sdk-21.0.8/lib\" --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.media"
+            "vmArgs": "--module-path \"c:/Users/lefeu/Desktop/code/javaFX/javafx-sdk-21.0.8/lib\" --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.media"
         }
     ]
 }

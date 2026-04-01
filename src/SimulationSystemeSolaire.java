@@ -3,7 +3,9 @@ import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.geometry.Point3D;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.scene.Group;
@@ -219,55 +221,27 @@ public class SimulationSystemeSolaire extends Application {
     }
 
     // Méthode pour calculer les vecteurs directionnels de la caméra
-        private void updateCameraDirections() {
-            // Récupérer la matrice de transformation de la caméra
-            Transform transform = camera.getLocalToSceneTransform();
-            
-            // Calculer le vecteur "avant" (direction où regarde la caméra)
-            // En JavaFX, l'axe Z négatif correspond à la direction "avant" de la caméra
-            Point3D forward = transform.deltaTransform(0, 0, -1).normalize();
-            
-            // Calculer le vecteur "droite" (perpendiculaire à la direction)
-            Point3D right = transform.deltaTransform(1, 0, 0).normalize();
-            
-            // Calculer le vecteur "haut" (perpendiculaire aux deux autres)
-            Point3D up = transform.deltaTransform(0, -1, 0).normalize();
-            
-            // Mettre à jour les directions
-            cameraForward = forward;
-            cameraRight = right;
-            cameraUp = up;
-        }
+    private void updateCameraDirections() {
+        // Récupérer la matrice de transformation de la caméra
+        Transform transform = camera.getLocalToSceneTransform();
+        
+        // Calculer le vecteur "avant" (direction où regarde la caméra)
+        // En JavaFX, l'axe Z négatif correspond à la direction "avant" de la caméra
+        Point3D forward = transform.deltaTransform(0, 0, -1).normalize();
+        
+        // Calculer le vecteur "droite" (perpendiculaire à la direction)
+        Point3D right = transform.deltaTransform(1, 0, 0).normalize();
+        
+        // Calculer le vecteur "haut" (perpendiculaire aux deux autres)
+        Point3D up = transform.deltaTransform(0, -1, 0).normalize();
+        
+        // Mettre à jour les directions
+        cameraForward = forward;
+        cameraRight = right;
+        cameraUp = up;
+    }
 
-        private void updateCameraDirectionsFromRotation() {
-            // Récupérer les angles de rotation de la caméra
-            double rotX = Math.toRadians(camera.getRotationAxis().getX()); 
-            double rotY = Math.toRadians(camera.getRotationAxis().getY());
-            double rotZ = Math.toRadians(camera.getRotationAxis().getZ());
-            
-            // Calculer la direction "avant" basée sur les rotations
-            double cosY = Math.cos(rotY);
-            double sinY = Math.sin(rotY);
-            double cosX = Math.cos(rotX);
-            double sinX = Math.sin(rotX);
-            
-            // Direction "avant" (où regarde la caméra)
-            cameraForward = new Point3D(
-                sinY * cosX,
-                -sinX,
-                -cosY * cosX
-            ).normalize();
-            
-            // Direction "droite" (perpendiculaire)
-            cameraRight = new Point3D(
-                Math.cos(rotY),
-                0,
-                Math.sin(rotY)
-            ).normalize();
-            
-            // Direction "haut" (produit vectoriel des deux autres)
-            cameraUp = cameraRight.crossProduct(cameraForward).normalize();
-        }
+    
 
     // Configuration des contrôles de caméra
     private void setupCameraControls(Scene scene) {
@@ -408,7 +382,7 @@ public class SimulationSystemeSolaire extends Application {
                     break;
                 case G:
                     doTrajectotyRender = false;
-                    
+
                     mercure.resetTrajectory();
                     venus.resetTrajectory();
                     terre.resetTrajectory();
@@ -537,20 +511,31 @@ public class SimulationSystemeSolaire extends Application {
         return a;
     }
 
-
-
-
-
-
-
-
     @Override
     public void start(Stage primaryStage) {
-        Group root = new Group();
-        Scene scene = new Scene(root, WIDTH, HEIGHT, true);
-        scene.setFill(Color.BLACK);
-        initCamera(scene);
-        setupCameraControls(scene);
+        // Group root = new Group();
+        // Scene scene = new Scene(root, WIDTH, HEIGHT, true);
+        // scene.setFill(Color.BLACK);
+        // initCamera(scene);
+        // setupCameraControls(scene);
+
+        // MÉTHODE 1 : Utiliser ImagePattern avec setFill (Simple)
+            Group root = new Group();
+            Scene scene = new Scene(root, WIDTH, HEIGHT, true);
+
+            // Charger votre image de texture (remplacez par votre chemin)
+            Image backgroundTexture = new Image("/resources/textures/stars.png");
+            // Ou depuis les ressources du projet :
+            // Image backgroundTexture = new Image(getClass().getResourceAsStream("/images/space_background.jpg"));
+
+            // Créer un pattern d'image
+            ImagePattern texturePattern = new ImagePattern(backgroundTexture);
+
+            // Appliquer la texture à la scène
+            scene.setFill(texturePattern);
+
+            initCamera(scene);
+            setupCameraControls(scene);
 
         // Création du Soleil
         double diamètreSoleil = 1.3927e6;
