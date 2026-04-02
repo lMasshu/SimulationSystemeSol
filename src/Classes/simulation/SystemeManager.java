@@ -51,6 +51,7 @@ public class SystemeManager {
             Astre astre = data.creerAstre(root, scale);
             astres.put(data, astre);
 
+            // on vérifie si c'est le soleil, une planète ou un satellite pour l'ajouter à la bonne liste
             if (data == AstreData.SOLEIL) {
                 astre.position = new Point3D(0, 0, 0);
                 astre.renderAstreSansTrajectoire(false, data.texturePath);
@@ -74,11 +75,13 @@ public class SystemeManager {
      */
     public void update(double time, boolean doTrajectory) {
         Astre soleil = astres.get(AstreData.SOLEIL);
+        if (soleil != null) soleil.updateSelfRotation(time);
 
         // Planètes (orbite héliocentriques)
         for (AstreData data : planetes) {
             Astre astre = astres.get(data);
             astre.updatePosition(time, Config.SCALE_DISTANCE, soleil.position);
+            astre.updateSelfRotation(time);
             astre.renderAstreSansTrajectoire(doTrajectory, data.texturePath);
         }
 
@@ -91,6 +94,7 @@ public class SystemeManager {
                     time, parent.position,
                     Config.SCALE_DISTANCE, data.displayDistanceFactor
                 );
+                astre.updateSelfRotation(time);
                 astre.renderAstreSansTrajectoire(false, data.texturePath);
             }
         }

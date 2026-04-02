@@ -29,6 +29,7 @@ public class Astre {
     public double  aphelie;         // UA
     public double  excentricite;
     public double  periodeOrbitale; // années
+    public double  periodeRotation; // heures
     public OrbitePlanete orbite;
 
     // --- État spatial ---
@@ -41,6 +42,7 @@ public class Astre {
     protected Sphere        sprite;
     protected Polyline      trajectory;
     protected PhongMaterial material;
+    private   Rotate        selfRotation;
     private   Point3D       previousPosition = null;
 
     // ===================================================================
@@ -51,6 +53,7 @@ public class Astre {
     public Astre(String nom, double masse, double diametre,
                  double perihelie, double aphelie, double periodeOrbitale,
                  double inclinaison, double longitudeNoeud, double argumentPerihelie,
+                 double periodeRotationHeures,
                  Group root, Color couleur) {
         this.nom            = nom;
         this.masse          = masse;
@@ -58,6 +61,7 @@ public class Astre {
         this.perihelie      = perihelie;
         this.aphelie        = aphelie;
         this.periodeOrbitale = periodeOrbitale;
+        this.periodeRotation = periodeRotationHeures;
         this.excentricite   = (aphelie - perihelie) / (aphelie + perihelie);
         this.orbite         = new OrbitePlanete(perihelie, aphelie, periodeOrbitale,
                                                 inclinaison, longitudeNoeud, argumentPerihelie);
@@ -71,7 +75,7 @@ public class Astre {
                  double perihelie, double aphelie, double periodeOrbitale,
                  Group root, Color couleur) {
         this(nom, masse, diametre, perihelie, aphelie, periodeOrbitale,
-             0, 0, 0, root, couleur);
+             0, 0, 0, 0, root, couleur);
     }
 
     private void initVectors() {
@@ -80,6 +84,9 @@ public class Astre {
         this.vitesse.add(0.0); this.vitesse.add(0.0); this.vitesse.add(0.0);
         this.material = new PhongMaterial();
         this.material.setDiffuseColor(couleur);
+        
+        // Initialisation de la rotation (autour de l'axe Y par défaut)
+        this.selfRotation = new Rotate(0, Rotate.Y_AXIS);
     }
 
     // ===================================================================
@@ -111,6 +118,22 @@ public class Astre {
         );
     }
 
+    /**
+     * Met à jour la rotation propre de l'astre.
+     * @param t Temps écoulé en années terrestres.
+     */
+    public void updateSelfRotation(double t) {
+        if (periodeRotation == 0) return;
+        
+        // Conversion du temps (années) en heures
+        double totalHours = t * 365.25 * 24.0;
+        
+        // Calcul de l'angle (une rotation complète = 360°)
+        // On utilise le modulo pour éviter des valeurs d'angle trop grandes
+        double angle = (totalHours / periodeRotation) * 360.0;
+        selfRotation.setAngle(angle % 360.0);
+    }
+
     // ===================================================================
     //  RENDU
     // ===================================================================
@@ -139,6 +162,7 @@ public class Astre {
                 }
                 sphere.setMaterial(mat);
                 sphere.setUserData(this); // Pour le mouse picking de CameraController
+                sphere.getTransforms().add(selfRotation);
 
                 this.material        = mat;
                 this.sprite          = sphere;
