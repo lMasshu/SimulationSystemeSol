@@ -227,7 +227,7 @@ public class Astre {
         if (periodeOrbitale <= 0 || orbitMeshView != null) return;
 
         // --- OPTIMISATION : 120 segments au lieu de 360 ---
-        int numPoints = 120;
+        int numPoints = 180;
         orbitCalculatedPoints = new Point3D[numPoints];
         double step = periodeOrbitale / (double)numPoints;
 

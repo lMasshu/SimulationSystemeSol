@@ -38,5 +38,5 @@ public final class Config {
     public static final double ORBIT_MAX_RADIUS       = 15000.0;
 
     /** Distance de référence (pixels) pour le calcul du facteur d'échelle dynamique. */
-    public static final double ORBIT_REFERENCE_DIST  = 200000.0;
+    public static final double ORBIT_REFERENCE_DIST  = 3000.0;
 }
