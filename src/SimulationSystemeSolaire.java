@@ -75,9 +75,11 @@ public class SimulationSystemeSolaire extends Application {
         if (cameraController == null) {
             cameraController = new CameraController(camera);
             cameraController.setupControls(scene);
+            // On se place un peu au-dessus et en recul pour voir le plan X-Z penché
+            cameraController.setPositionAndLookAt(new Point3D(0, -600, -1000), Point3D.ZERO);
         } else {
             cameraController.detach();
-            cameraController.setPositionAndLookAt(new Point3D(0, 0, -500), Point3D.ZERO);
+            cameraController.setPositionAndLookAt(new Point3D(0, -600, -1000), Point3D.ZERO);
         }
     }
 
@@ -131,11 +133,8 @@ public class SimulationSystemeSolaire extends Application {
 
                 // --- Trajectoires orbitales ---
                 case T:
-                    doTrajectoryRender = true;
-                    break;
-                case G:
-                    doTrajectoryRender = false;
-                    systeme.resetAllTrajectories();
+                    doTrajectoryRender = !doTrajectoryRender;
+                    System.out.printf("🛰 Trajectoires : %s%n", doTrajectoryRender ? "ON" : "OFF");
                     break;
 
                 default:

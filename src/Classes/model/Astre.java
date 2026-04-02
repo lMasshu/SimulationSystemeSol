@@ -8,9 +8,9 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
-import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
+import Classes.data.Config;
 
 /**
  * Représentation d'un corps céleste dans la simulation 3D.
@@ -40,10 +40,9 @@ public class Astre {
     public Group         root;
     public Color         couleur;
     protected Sphere        sprite;
-    protected Polyline      trajectory;
+    protected Group         orbitPathGroup;
     protected PhongMaterial material;
     private   Rotate        selfRotation;
-    private   Point3D       previousPosition = null;
 
     // ===================================================================
     //  CONSTRUCTEURS
@@ -98,8 +97,8 @@ public class Astre {
         double[] pos = orbite.calculerPosition(t);
         this.position = new Point3D(
             pos[0] * scaleDistance + centrePosition.getX(),
-            pos[1] * scaleDistance + centrePosition.getY(),
-            pos[2] * scaleDistance + centrePosition.getZ()
+            pos[2] * scaleDistance + centrePosition.getY(), // Inclinaison sur Y
+            pos[1] * scaleDistance + centrePosition.getZ()  // Ecliptique sur Z
         );
     }
 
@@ -113,8 +112,8 @@ public class Astre {
         double   scale = scaleDistance * factor;
         this.position  = new Point3D(
             pos[0] * scale + parentPosition.getX(),
-            pos[1] * scale + parentPosition.getY(),
-            pos[2] * scale + parentPosition.getZ()
+            pos[2] * scale + parentPosition.getY(), // Inclinaison sur Y
+            pos[1] * scale + parentPosition.getZ()  // Ecliptique sur Z
         );
     }
 
@@ -146,9 +145,16 @@ public class Astre {
      * @param traj        Activer le tracé de trajectoire (cylindres entre positions).
      * @param texturePath Chemin vers la texture PNG dans les resources.
      */
-    public boolean renderAstreSansTrajectoire(boolean traj, String texturePath) {
+    /**
+     * Mise à jour du sprite 3D et du tracé des trajectoires.
+     *
+     * @param traj           Activer le tracé de trajectoire (optionnel).
+     * @param texturePath    Chemin vers la texture PNG.
+     * @param parentPosition Position de l'astre parent (pour translater l'orbite si nécessaire).
+     */
+    public boolean render(boolean traj, String texturePath, Point3D parentPosition) {
         try {
-            // --- Initialisation unique ---
+            // --- Initialisation unique du sprite ---
             if (this.sprite == null) {
                 Sphere sphere = new Sphere(this.diametre / 2, 32);
 
@@ -161,12 +167,11 @@ public class Astre {
                     mat.setDiffuseColor(Color.GRAY);
                 }
                 sphere.setMaterial(mat);
-                sphere.setUserData(this); // Pour le mouse picking de CameraController
+                sphere.setUserData(this);
                 sphere.getTransforms().add(selfRotation);
 
                 this.material        = mat;
                 this.sprite          = sphere;
-                this.previousPosition = this.position;
                 root.getChildren().add(sphere);
             }
 
@@ -175,32 +180,15 @@ public class Astre {
             sprite.setTranslateY(position.getY());
             sprite.setTranslateZ(position.getZ());
 
-            // --- Trajectoire (cylindres) ---
-            if (traj && previousPosition != null && !previousPosition.equals(position)) {
-                Point3D diff   = position.subtract(previousPosition);
-                double  height = diff.magnitude();
-                if (height > 0) {
-                    Cylinder line = new Cylinder(0.4, height);
-                    PhongMaterial lm = new PhongMaterial();
-                    lm.setDiffuseColor(Color.rgb(255, 255, 255, 0.5));
-                    lm.setSpecularColor(Color.WHITE);
-                    line.setMaterial(lm);
-
-                    Point3D mid = previousPosition.midpoint(position);
-                    line.setTranslateX(mid.getX());
-                    line.setTranslateY(mid.getY());
-                    line.setTranslateZ(mid.getZ());
-
-                    Point3D yAxis = new Point3D(0, 1, 0);
-                    Point3D axis  = yAxis.crossProduct(diff);
-                    double  angle = Math.toDegrees(Math.acos(diff.normalize().dotProduct(yAxis)));
-                    if (!Double.isNaN(angle) && axis.magnitude() > 0) {
-                        line.getTransforms().add(new Rotate(angle, axis));
-                    }
-                    root.getChildren().add(line);
+            // --- Visibilité et position de l'orbite ---
+            if (orbitPathGroup != null) {
+                orbitPathGroup.setVisible(traj);
+                if (parentPosition != null) {
+                    orbitPathGroup.setTranslateX(parentPosition.getX());
+                    orbitPathGroup.setTranslateY(parentPosition.getY());
+                    orbitPathGroup.setTranslateZ(parentPosition.getZ());
                 }
             }
-            previousPosition = position;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -209,13 +197,71 @@ public class Astre {
         return true;
     }
 
+    /** Overload pour les astres sans parent (ex: Soleil). */
+    public boolean render(boolean traj, String texturePath) {
+        return render(traj, texturePath, null);
+    }
+
+    /**
+     * Calcule et affiche l'orbite complète de l'astre.
+     * @param scaleDistance Facteur d'échelle pour les distances.
+     * @param factor Facteur multiplicatif pour rendre les orbites visibles (lunes).
+     */
+    public void initOrbitPath(double scaleDistance, double factor) {
+        if (periodeOrbitale <= 0 || orbitPathGroup != null) return;
+
+        orbitPathGroup = new Group();
+        double step = periodeOrbitale / 360.0; // 360 segments
+        
+        Point3D prev = null;
+        for (int j = 0; j <= 360; j++) {
+            double t = j * step;
+            double[] pos = orbite.calculerPosition(t);
+            Point3D current = new Point3D(
+                pos[0] * scaleDistance * factor,
+                pos[2] * scaleDistance * factor, // Inclinaison sur Y
+                pos[1] * scaleDistance * factor  // Ecliptique sur Z
+            );
+
+            if (prev != null) {
+                Point3D diff = current.subtract(prev);
+                double height = diff.magnitude();
+                if (height > 0) {
+                    Cylinder segment = new Cylinder(Config.ORBIT_RADIUS, height);
+                    PhongMaterial sm = new PhongMaterial();
+                    sm.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), Config.ORBIT_OPACITY));
+                    segment.setMaterial(sm);
+
+                    Point3D mid = prev.midpoint(current);
+                    segment.setTranslateX(mid.getX());
+                    segment.setTranslateY(mid.getY());
+                    segment.setTranslateZ(mid.getZ());
+
+                    Point3D yAxis = new Point3D(0, 1, 0);
+                    Point3D axis = yAxis.crossProduct(diff);
+                    double angle = Math.toDegrees(Math.acos(diff.normalize().dotProduct(yAxis)));
+                    if (!Double.isNaN(angle) && axis.magnitude() > 0) {
+                        segment.getTransforms().add(new Rotate(angle, axis));
+                    }
+                    orbitPathGroup.getChildren().add(segment);
+                }
+            }
+            prev = current;
+        }
+        
+        // On n'ajoute pas encore à root car pour les lunes, il faudra peut-être l'ajouter au parent
+        // Mais par défaut, on peut l'ajouter ici si on veut rester sur une structure simple.
+        root.getChildren().add(orbitPathGroup);
+        orbitPathGroup.setVisible(false);
+    }
+
     // ===================================================================
     //  UTILITAIRES
     // ===================================================================
 
-    /** Efface les points de trajectoire accumulés. */
+    /** Efface les trajectoires accumulées (non utilisé avec le nouveau système). */
     public void resetTrajectory() {
-        if (trajectory != null) trajectory.getPoints().clear();
+        if (orbitPathGroup != null) orbitPathGroup.setVisible(false);
     }
 
     @Override

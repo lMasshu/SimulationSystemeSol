@@ -9,8 +9,8 @@ public final class Config {
     private Config() {} // Non instanciable
 
     // --- Fenêtre ---
-    public static final int WIDTH  = 800;
-    public static final int HEIGHT = 600;
+    public static final int WIDTH  = 1920;
+    public static final int HEIGHT = 1080;
 
     // --- Échelles spatiales ---
     /** 1 UA (Unité Astronomique) = 150 pixels. */
@@ -27,4 +27,10 @@ public final class Config {
     public static final double MIN_SPEED          = 1.0;
     public static final double MAX_SPEED          = 50000.0;
     public static final double SPEED_MULTIPLIER   = 1.5;
+
+    // --- Trajectoires ---
+    /** Opacité des trajectoires orbitales (0.0 à 1.0). */
+    public static final double ORBIT_OPACITY      = 0.05;
+    /** Épaisseur (rayon) du trait de trajectoire. */
+    public static final double ORBIT_RADIUS       = 0.1;
 }

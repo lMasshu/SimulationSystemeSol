@@ -51,10 +51,13 @@ public class SystemeManager {
             Astre astre = data.creerAstre(root, scale);
             astres.put(data, astre);
 
+            // Initialisation de la trajectoire orbitale complète
+            astre.initOrbitPath(Config.SCALE_DISTANCE, data.displayDistanceFactor);
+
             // on vérifie si c'est le soleil, une planète ou un satellite pour l'ajouter à la bonne liste
             if (data == AstreData.SOLEIL) {
                 astre.position = new Point3D(0, 0, 0);
-                astre.renderAstreSansTrajectoire(false, data.texturePath);
+                astre.render(false, data.texturePath);
             } else if (data.isPlanete()) {
                 planetes.add(data);
             } else if (data.isSatellite()) {
@@ -82,7 +85,7 @@ public class SystemeManager {
             Astre astre = astres.get(data);
             astre.updatePosition(time, Config.SCALE_DISTANCE, soleil.position);
             astre.updateSelfRotation(time);
-            astre.renderAstreSansTrajectoire(doTrajectory, data.texturePath);
+            astre.render(doTrajectory, data.texturePath);
         }
 
         // Satellites (orbites planétocentristes
@@ -95,7 +98,8 @@ public class SystemeManager {
                     Config.SCALE_DISTANCE, data.displayDistanceFactor
                 );
                 astre.updateSelfRotation(time);
-                astre.renderAstreSansTrajectoire(false, data.texturePath);
+                // On passe la position du parent pour translater l'orbite de la lune
+                astre.render(doTrajectory, data.texturePath, parent.position);
             }
         }
     }
