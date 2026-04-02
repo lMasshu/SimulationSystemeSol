@@ -75,8 +75,9 @@ public class SystemeManager {
      *
      * @param time         Temps simulé courant (en années terrestres).
      * @param doTrajectory Activer le tracé des trajectoires orbitales pour les planètes.
+     * @param cameraPos    Position de la caméra pour l'ajustement dynamique des trajectoires.
      */
-    public void update(double time, boolean doTrajectory) {
+    public void update(double time, boolean doTrajectory, Point3D cameraPos) {
         Astre soleil = astres.get(AstreData.SOLEIL);
         if (soleil != null) soleil.updateSelfRotation(time);
 
@@ -86,9 +87,10 @@ public class SystemeManager {
             astre.updatePosition(time, Config.SCALE_DISTANCE, soleil.position);
             astre.updateSelfRotation(time);
             astre.render(doTrajectory, data.texturePath);
+            if (doTrajectory) astre.updateOrbitVisuals(cameraPos);
         }
 
-        // Satellites (orbites planétocentristes
+        // Satellites (orbites planétocentristes)
         for (AstreData data : satellites) {
             Astre astre  = astres.get(data);
             Astre parent = astres.get(data.parentData);
@@ -100,6 +102,7 @@ public class SystemeManager {
                 astre.updateSelfRotation(time);
                 // On passe la position du parent pour translater l'orbite de la lune
                 astre.render(doTrajectory, data.texturePath, parent.position);
+                if (doTrajectory) astre.updateOrbitVisuals(cameraPos);
             }
         }
     }

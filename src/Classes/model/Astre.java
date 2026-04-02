@@ -7,8 +7,9 @@ import javafx.scene.Group;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Cylinder;
+import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
+import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import Classes.data.Config;
 
@@ -41,8 +42,14 @@ public class Astre {
     public Color         couleur;
     protected Sphere        sprite;
     protected Group         orbitPathGroup;
+    private   MeshView      orbitMeshView;
+    private   TriangleMesh  orbitMesh;
+    private   Point3D[]     orbitCalculatedPoints;
+    private   PhongMaterial orbitMaterial;
     protected PhongMaterial material;
     private   Rotate        selfRotation;
+    private   long          lastVisualUpdateMillis = 0;
+    private   Point3D       lastCameraVisualPos    = null;
 
     // ===================================================================
     //  CONSTRUCTEURS
@@ -207,52 +214,134 @@ public class Astre {
      * @param scaleDistance Facteur d'échelle pour les distances.
      * @param factor Facteur multiplicatif pour rendre les orbites visibles (lunes).
      */
+    /**
+     * Initialise la trajectoire orbitale complète sous forme de MeshView unique.
+     * @param scaleDistance Facteur d'échelle pour l'UA.
+     * @param factor Facteur d'affichage propre à l'astre (lunes).
+     */
     public void initOrbitPath(double scaleDistance, double factor) {
-        if (periodeOrbitale <= 0 || orbitPathGroup != null) return;
+        if (periodeOrbitale <= 0 || orbitMeshView != null) return;
 
-        orbitPathGroup = new Group();
-        double step = periodeOrbitale / 360.0; // 360 segments
-        
-        Point3D prev = null;
-        for (int j = 0; j <= 360; j++) {
-            double t = j * step;
-            double[] pos = orbite.calculerPosition(t);
-            Point3D current = new Point3D(
+        // --- OPTIMISATION : 120 segments au lieu de 360 ---
+        int numPoints = 120;
+        orbitCalculatedPoints = new Point3D[numPoints];
+        double step = periodeOrbitale / (double)numPoints;
+
+        for (int i = 0; i < numPoints; i++) {
+            double[] pos = orbite.calculerPosition(i * step);
+            orbitCalculatedPoints[i] = new Point3D(
                 pos[0] * scaleDistance * factor,
                 pos[2] * scaleDistance * factor, // Inclinaison sur Y
                 pos[1] * scaleDistance * factor  // Ecliptique sur Z
             );
-
-            if (prev != null) {
-                Point3D diff = current.subtract(prev);
-                double height = diff.magnitude();
-                if (height > 0) {
-                    Cylinder segment = new Cylinder(Config.ORBIT_RADIUS, height);
-                    PhongMaterial sm = new PhongMaterial();
-                    sm.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), Config.ORBIT_OPACITY));
-                    segment.setMaterial(sm);
-
-                    Point3D mid = prev.midpoint(current);
-                    segment.setTranslateX(mid.getX());
-                    segment.setTranslateY(mid.getY());
-                    segment.setTranslateZ(mid.getZ());
-
-                    Point3D yAxis = new Point3D(0, 1, 0);
-                    Point3D axis = yAxis.crossProduct(diff);
-                    double angle = Math.toDegrees(Math.acos(diff.normalize().dotProduct(yAxis)));
-                    if (!Double.isNaN(angle) && axis.magnitude() > 0) {
-                        segment.getTransforms().add(new Rotate(angle, axis));
-                    }
-                    orbitPathGroup.getChildren().add(segment);
-                }
-            }
-            prev = current;
         }
+
+        // --- Construction du Mesh initial ---
+        orbitMesh = new TriangleMesh();
         
-        // On n'ajoute pas encore à root car pour les lunes, il faudra peut-être l'ajouter au parent
-        // Mais par défaut, on peut l'ajouter ici si on veut rester sur une structure simple.
+        // Coordonnées de texture vides (requises par TriangleMesh)
+        orbitMesh.getTexCoords().addAll(0, 0);
+
+        // Faces : On relie chaque segment (4 faces par segment, 2 triangles par face)
+        for (int i = 0; i < numPoints; i++) {
+            int next = (i + 1) % numPoints;
+            int i4 = i * 4;
+            int next4 = next * 4;
+
+            // 4 faces du tube (carré)
+            for (int f = 0; f < 4; f++) {
+                int fNext = (f + 1) % 4;
+                // Triangle 1
+                orbitMesh.getFaces().addAll(i4 + f, 0, next4 + f, 0, next4 + fNext, 0);
+                // Triangle 2
+                orbitMesh.getFaces().addAll(i4 + f, 0, next4 + fNext, 0, i4 + fNext, 0);
+            }
+        }
+
+        orbitMeshView = new MeshView(orbitMesh);
+        orbitMaterial = new PhongMaterial();
+        orbitMaterial.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), Config.ORBIT_MIN_OPACITY));
+        orbitMeshView.setMaterial(orbitMaterial);
+        
+        orbitPathGroup = new Group(orbitMeshView);
         root.getChildren().add(orbitPathGroup);
         orbitPathGroup.setVisible(false);
+
+        // Initialisation des points du Mesh à une épaisseur de base
+        updateMeshPoints(Config.ORBIT_MIN_RADIUS);
+    }
+
+    /**
+     * Calcule le niveau de détail dynamique de l'orbite en fonction de la distance à la caméra.
+     */
+    public void updateOrbitVisuals(Point3D cameraPos) {
+        if (orbitMeshView == null || !orbitPathGroup.isVisible()) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastVisualUpdateMillis < 100) return;
+        if (lastCameraVisualPos != null && cameraPos.distance(lastCameraVisualPos) < 5.0) return;
+
+        lastVisualUpdateMillis = now;
+        lastCameraVisualPos = cameraPos;
+
+        double distance = cameraPos.distance(this.position);
+        
+        // --- NOUVELLE LOGIQUE : Rayon proportionnel à la distance ---
+        // On utilise la distance de référence pour définir le rayon de base
+        double factor = distance / Config.ORBIT_REFERENCE_DIST;
+        
+        // Update Opacity (logarithmique reste bien pour l'opacité)
+        double logRatio = Math.log10(factor + 1);
+        double opacity = Math.min(Config.ORBIT_MAX_OPACITY, Config.ORBIT_MIN_OPACITY * (1.0 + logRatio * 10.0));
+        orbitMaterial.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), opacity));
+
+        // Update Thickness (linéaire pour plus de réactivité au zoom)
+        // On bride entre Config.ORBIT_MIN_RADIUS et Config.ORBIT_MAX_RADIUS
+        double radius = Math.max(Config.ORBIT_MIN_RADIUS, Math.min(Config.ORBIT_MAX_RADIUS, factor * 2.0));
+        updateMeshPoints(radius);
+    }
+
+    private void updateMeshPoints(double radius) {
+        if (orbitMesh == null) return;
+        
+        int numPoints = orbitCalculatedPoints.length;
+        float[] points = new float[numPoints * 4 * 3]; // 4 vertices par point, 3 coordonées (x,y,z)
+        float r = (float)radius;
+
+        for (int i = 0; i < numPoints; i++) {
+            Point3D p = orbitCalculatedPoints[i];
+            
+            // Calcul de la direction du segment (tangente locale)
+            Point3D next = orbitCalculatedPoints[(i + 1) % numPoints];
+            Point3D prev = orbitCalculatedPoints[(i - 1 + numPoints) % numPoints];
+            Point3D tangent = next.subtract(prev).normalize();
+
+            // Création d'un repère local (Vecteurs orthogonaux U et V)
+            // On utilise un vecteur vertical arbitraire pour débuter le cross product
+            Point3D up = (Math.abs(tangent.getY()) > 0.9) ? new Point3D(1, 0, 0) : new Point3D(0, 1, 0);
+            Point3D u  = tangent.crossProduct(up).normalize();
+            Point3D v  = tangent.crossProduct(u).normalize();
+
+            // 4 vertices formant un carré perpendiculaire à la tangente
+            // Point 0
+            points[i * 12 + 0] = (float)(p.getX() + (u.getX() + v.getX()) * r);
+            points[i * 12 + 1] = (float)(p.getY() + (u.getY() + v.getY()) * r);
+            points[i * 12 + 2] = (float)(p.getZ() + (u.getZ() + v.getZ()) * r);
+            // Point 1
+            points[i * 12 + 3] = (float)(p.getX() + (u.getX() - v.getX()) * r);
+            points[i * 12 + 4] = (float)(p.getY() + (u.getY() - v.getY()) * r);
+            points[i * 12 + 5] = (float)(p.getZ() + (u.getZ() - v.getZ()) * r);
+            // Point 2
+            points[i * 12 + 6] = (float)(p.getX() + (-u.getX() - v.getX()) * r);
+            points[i * 12 + 7] = (float)(p.getY() + (-u.getY() - v.getY()) * r);
+            points[i * 12 + 8] = (float)(p.getZ() + (-u.getZ() - v.getZ()) * r);
+            // Point 3
+            points[i * 12 + 9] = (float)(p.getX() + (-u.getX() + v.getX()) * r);
+            points[i * 12 + 10] = (float)(p.getY() + (-u.getY() + v.getY()) * r);
+            points[i * 12 + 11] = (float)(p.getZ() + (-u.getZ() + v.getZ()) * r);
+        }
+
+        orbitMesh.getPoints().setAll(points);
     }
 
     // ===================================================================

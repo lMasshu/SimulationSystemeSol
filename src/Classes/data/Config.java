@@ -29,8 +29,14 @@ public final class Config {
     public static final double SPEED_MULTIPLIER   = 1.5;
 
     // --- Trajectoires ---
-    /** Opacité des trajectoires orbitales (0.0 à 1.0). */
-    public static final double ORBIT_OPACITY      = 0.05;
-    /** Épaisseur (rayon) du trait de trajectoire. */
-    public static final double ORBIT_RADIUS       = 0.1;
+    /** Opacité des trajectoires orbitales (base). */
+    public static final double ORBIT_MIN_OPACITY      = 0.10;
+    public static final double ORBIT_MAX_OPACITY      = 0.60;
+    
+    /** Épaisseur (rayon) du trait de trajectoire (base). */
+    public static final double ORBIT_MIN_RADIUS       = 0.005;
+    public static final double ORBIT_MAX_RADIUS       = 15.0;
+
+    /** Distance de référence (UA) pour le calcul du facteur d'échelle dynamique. */
+    public static final double ORBIT_REFERENCE_DIST  = 3000.0;
 }

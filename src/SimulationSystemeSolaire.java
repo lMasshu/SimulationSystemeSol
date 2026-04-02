@@ -160,7 +160,8 @@ public class SimulationSystemeSolaire extends Application {
 
                 if (!isPaused) time += deltaT / timeSpeed;
 
-                systeme.update(time, doTrajectoryRender);
+                Point3D cameraPos = new Point3D(camera.getTranslateX(), camera.getTranslateY(), camera.getTranslateZ());
+                systeme.update(time, doTrajectoryRender, cameraPos);
                 if (cameraController != null) cameraController.update();
 
                 if (now - lastPrintTime > 5_000_000_000L) {
