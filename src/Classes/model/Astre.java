@@ -353,6 +353,21 @@ public class Astre {
         if (orbitPathGroup != null) orbitPathGroup.setVisible(false);
     }
 
+    //getter pour getTranslateX
+    public double getTranslateX() {
+        return sprite.getTranslateX();
+    }
+
+    //getter pour getTranslateY
+    public double getTranslateY() {
+        return sprite.getTranslateY();
+    }
+
+    //getter pour getTranslateZ
+    public double getTranslateZ() {
+        return sprite.getTranslateZ();
+    }
+
     @Override
     public String toString() {
         return String.format("Astre{nom='%s', masse=%.2e kg, diamètre=%.2f km, position=%s}",

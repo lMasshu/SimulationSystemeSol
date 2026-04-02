@@ -2,6 +2,7 @@ import Classes.camera.CameraController;
 import Classes.data.AstreData;
 import Classes.data.Config;
 import Classes.model.Astre;
+import Classes.model.LightEngine;
 import Classes.simulation.SystemeManager;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
@@ -32,6 +33,7 @@ public class SimulationSystemeSolaire extends Application {
     private final SystemeManager   systeme  = new SystemeManager();
     private       PerspectiveCamera camera;
     private       CameraController cameraController;
+    private       Group            root;
 
     // --- État de la simulation ---
     private double  timeSpeed         = Config.DEFAULT_TIME_SPEED;
@@ -48,13 +50,18 @@ public class SimulationSystemeSolaire extends Application {
     // ===================================================================
     @Override
     public void start(Stage primaryStage) {
-        Group root  = new Group();
+        root  = new Group();
         Scene scene = new Scene(root, Config.WIDTH, Config.HEIGHT, true);
         scene.setFill(new ImagePattern(new Image("/resources/textures/stars.png")));
 
         initCamera(scene);
         setupControls(scene);
         systeme.init(root);
+
+        // Initialisation de la lumière (Soleil)
+        LightEngine lightEngine = new LightEngine();
+        root.getChildren().add(lightEngine.getSun());
+
         startAnimationLoop();
 
         primaryStage.setTitle("Simulateur du Système Solaire 3D");
