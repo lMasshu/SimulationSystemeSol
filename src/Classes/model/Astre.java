@@ -46,8 +46,12 @@ public class Astre {
     private   TriangleMesh  orbitMesh;
     private   Point3D[]     orbitCalculatedPoints;
     private   PhongMaterial orbitMaterial;
-    protected PhongMaterial material;
+    private   PhongMaterial material;
     private   Rotate        selfRotation;
+    private   Point3D[]     orbitBasisU;
+    private   Point3D[]     orbitBasisV;
+    private   float[]       orbitMeshPoints;
+    private   double        lastMeshRadius         = -1.0;
     private   long          lastVisualUpdateMillis = 0;
     private   Point3D       lastCameraVisualPos    = null;
 
@@ -226,9 +230,13 @@ public class Astre {
     public void initOrbitPath(double scaleDistance, double factor) {
         if (periodeOrbitale <= 0 || orbitMeshView != null) return;
 
-        // --- OPTIMISATION : 120 segments au lieu de 360 ---
-        int numPoints = 180;
+        // 1000 segment pour une orbite fluide
+        int numPoints = 1000;
         orbitCalculatedPoints = new Point3D[numPoints];
+        orbitBasisU           = new Point3D[numPoints];
+        orbitBasisV           = new Point3D[numPoints];
+        orbitMeshPoints       = new float[numPoints * 4 * 3];
+        
         double step = periodeOrbitale / (double)numPoints;
 
         for (int i = 0; i < numPoints; i++) {
@@ -238,6 +246,21 @@ public class Astre {
                 pos[2] * scaleDistance * factor, // Inclinaison sur Y
                 pos[1] * scaleDistance * factor  // Ecliptique sur Z
             );
+        }
+
+        // --- PRÉ-CALCUL DES VECTEURS DE BASE (U, V) ---
+        // On calcule une seule fois le repère local de chaque segment
+        for (int i = 0; i < numPoints; i++) {
+            Point3D next = orbitCalculatedPoints[(i + 1) % numPoints];
+            Point3D prev = orbitCalculatedPoints[(i - 1 + numPoints) % numPoints];
+            Point3D tangent = next.subtract(prev).normalize();
+
+            Point3D up = (Math.abs(tangent.getY()) > 0.9) ? new Point3D(1, 0, 0) : new Point3D(0, 1, 0);
+            Point3D u  = tangent.crossProduct(up).normalize();
+            Point3D v  = tangent.crossProduct(u).normalize();
+            
+            orbitBasisU[i] = u;
+            orbitBasisV[i] = v;
         }
 
         // --- Construction du Mesh initial ---
@@ -282,70 +305,76 @@ public class Astre {
         if (orbitMeshView == null || !orbitPathGroup.isVisible()) return;
 
         long now = System.currentTimeMillis();
-        if (now - lastVisualUpdateMillis < 100) return;
-        if (lastCameraVisualPos != null && cameraPos.distance(lastCameraVisualPos) < 5.0) return;
+        // Optimisation 1 : Fréquence de mise à jour (200ms)
+        if (now - lastVisualUpdateMillis < 200) return;
+        
+        // Optimisation 2 : Seuil de mouvement de caméra (50 pixels sur l'échelle 1e4)
+        if (lastCameraVisualPos != null && cameraPos.distance(lastCameraVisualPos) < 50.0) return;
 
         lastVisualUpdateMillis = now;
         lastCameraVisualPos = cameraPos;
 
         double distance = cameraPos.distance(this.position);
+        double factor   = distance / Config.ORBIT_REFERENCE_DIST;
         
-        // --- NOUVELLE LOGIQUE : Rayon proportionnel à la distance ---
-        // On utilise la distance de référence pour définir le rayon de base
-        double factor = distance / Config.ORBIT_REFERENCE_DIST;
-        
-        // Update Opacity (logarithmique reste bien pour l'opacité)
+        // Update Opacity
         double logRatio = Math.log10(factor + 1);
         double opacity = Math.min(Config.ORBIT_MAX_OPACITY, Config.ORBIT_MIN_OPACITY * (1.0 + logRatio * 10.0));
         orbitMaterial.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), opacity));
 
-        // Update Thickness (linéaire pour plus de réactivité au zoom)
-        // On bride entre Config.ORBIT_MIN_RADIUS et Config.ORBIT_MAX_RADIUS
+        // Update Thickness
         double radius = Math.max(Config.ORBIT_MIN_RADIUS, Math.min(Config.ORBIT_MAX_RADIUS, factor * 2.0));
-        updateMeshPoints(radius);
+        
+        // Optimisation 3 : Seuil de changement de rayon (2%)
+        // Évite de renvoyer le Mesh au GPU si le changement de taille est imperceptible
+        double delta = Math.abs(radius - lastMeshRadius) / Math.max(1e-9, lastMeshRadius);
+        if (lastMeshRadius < 0 || delta > 0.02) {
+            updateMeshPoints(radius);
+        }
     }
 
     private void updateMeshPoints(double radius) {
-        if (orbitMesh == null) return;
+        if (orbitMesh == null || orbitBasisU == null) return;
         
         int numPoints = orbitCalculatedPoints.length;
-        float[] points = new float[numPoints * 4 * 3]; // 4 vertices par point, 3 coordonées (x,y,z)
         float r = (float)radius;
 
         for (int i = 0; i < numPoints; i++) {
             Point3D p = orbitCalculatedPoints[i];
+            Point3D u = orbitBasisU[i];
+            Point3D v = orbitBasisV[i];
             
-            // Calcul de la direction du segment (tangente locale)
-            Point3D next = orbitCalculatedPoints[(i + 1) % numPoints];
-            Point3D prev = orbitCalculatedPoints[(i - 1 + numPoints) % numPoints];
-            Point3D tangent = next.subtract(prev).normalize();
-
-            // Création d'un repère local (Vecteurs orthogonaux U et V)
-            // On utilise un vecteur vertical arbitraire pour débuter le cross product
-            Point3D up = (Math.abs(tangent.getY()) > 0.9) ? new Point3D(1, 0, 0) : new Point3D(0, 1, 0);
-            Point3D u  = tangent.crossProduct(up).normalize();
-            Point3D v  = tangent.crossProduct(u).normalize();
+            float ux = (float)u.getX() * r;
+            float uy = (float)u.getY() * r;
+            float uz = (float)u.getZ() * r;
+            
+            float vx = (float)v.getX() * r;
+            float vy = (float)v.getY() * r;
+            float vz = (float)v.getZ() * r;
 
             // 4 vertices formant un carré perpendiculaire à la tangente
-            // Point 0
-            points[i * 12 + 0] = (float)(p.getX() + (u.getX() + v.getX()) * r);
-            points[i * 12 + 1] = (float)(p.getY() + (u.getY() + v.getY()) * r);
-            points[i * 12 + 2] = (float)(p.getZ() + (u.getZ() + v.getZ()) * r);
-            // Point 1
-            points[i * 12 + 3] = (float)(p.getX() + (u.getX() - v.getX()) * r);
-            points[i * 12 + 4] = (float)(p.getY() + (u.getY() - v.getY()) * r);
-            points[i * 12 + 5] = (float)(p.getZ() + (u.getZ() - v.getZ()) * r);
-            // Point 2
-            points[i * 12 + 6] = (float)(p.getX() + (-u.getX() - v.getX()) * r);
-            points[i * 12 + 7] = (float)(p.getY() + (-u.getY() - v.getY()) * r);
-            points[i * 12 + 8] = (float)(p.getZ() + (-u.getZ() - v.getZ()) * r);
-            // Point 3
-            points[i * 12 + 9] = (float)(p.getX() + (-u.getX() + v.getX()) * r);
-            points[i * 12 + 10] = (float)(p.getY() + (-u.getY() + v.getY()) * r);
-            points[i * 12 + 11] = (float)(p.getZ() + (-u.getZ() + v.getZ()) * r);
+            int base = i * 12;
+            
+            // Point 0 (U + V)
+            orbitMeshPoints[base + 0] = (float)p.getX() + ux + vx;
+            orbitMeshPoints[base + 1] = (float)p.getY() + uy + vy;
+            orbitMeshPoints[base + 2] = (float)p.getZ() + uz + vz;
+            // Point 1 (U - V)
+            orbitMeshPoints[base + 3] = (float)p.getX() + ux - vx;
+            orbitMeshPoints[base + 4] = (float)p.getY() + uy - vy;
+            orbitMeshPoints[base + 5] = (float)p.getZ() + uz - vz;
+            // Point 2 (-U - V)
+            orbitMeshPoints[base + 6] = (float)p.getX() - ux - vx;
+            orbitMeshPoints[base + 7] = (float)p.getY() - uy - vy;
+            orbitMeshPoints[base + 8] = (float)p.getZ() - uz - vz;
+            // Point 3 (-U + V)
+            orbitMeshPoints[base + 9] = (float)p.getX() - ux + vx;
+            orbitMeshPoints[base + 10] = (float)p.getY() - uy + vy;
+            orbitMeshPoints[base + 11] = (float)p.getZ() - uz + vz;
         }
 
-        orbitMesh.getPoints().setAll(points);
+        orbitMesh.getPoints().setAll(orbitMeshPoints);
+        this.lastMeshRadius = radius;
     }
 
     // ===================================================================
