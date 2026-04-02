@@ -14,13 +14,13 @@ public final class Config {
 
     // --- Échelles spatiales ---
     /** 1 UA (Unité Astronomique) = 150 pixels. */
-    public static final double SCALE_DISTANCE    = 150.0;
+    public static final double SCALE_DISTANCE    = 1e4;
 
     /** 1 pixel = 10 000 km pour les diamètres d'astres. */
     public static final double SCALE_DIAMETER    = 1e4;
 
-    /** Échelle de diamètre spéciale pour le Soleil (évite de bloquer l'écran). */
-    public static final double SCALE_DIAMETER_SUN = 1e5;
+    /** Échelle de diamètre pour le Soleil (unifiée avec les planètes à 100x la taille réelle). */
+    public static final double SCALE_DIAMETER_SUN = 1e4;
 
     // --- Vitesse de simulation ---
     public static final double DEFAULT_TIME_SPEED = 500.0;
@@ -35,8 +35,8 @@ public final class Config {
     
     /** Épaisseur (rayon) du trait de trajectoire (base). */
     public static final double ORBIT_MIN_RADIUS       = 0.005;
-    public static final double ORBIT_MAX_RADIUS       = 15.0;
+    public static final double ORBIT_MAX_RADIUS       = 15000.0;
 
-    /** Distance de référence (UA) pour le calcul du facteur d'échelle dynamique. */
+    /** Distance de référence (pixels) pour le calcul du facteur d'échelle dynamique. */
     public static final double ORBIT_REFERENCE_DIST  = 3000.0;
 }

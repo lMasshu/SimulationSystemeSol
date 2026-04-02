@@ -2,12 +2,14 @@ import Classes.camera.CameraController;
 import Classes.data.AstreData;
 import Classes.data.Config;
 import Classes.model.Astre;
+import Classes.model.LightEngine;
 import Classes.simulation.SystemeManager;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
+import javafx.scene.AmbientLight;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.paint.ImagePattern;
@@ -32,6 +34,7 @@ public class SimulationSystemeSolaire extends Application {
     private final SystemeManager   systeme  = new SystemeManager();
     private       PerspectiveCamera camera;
     private       CameraController cameraController;
+    private       Group            root;
 
     // --- État de la simulation ---
     private double  timeSpeed         = Config.DEFAULT_TIME_SPEED;
@@ -48,13 +51,22 @@ public class SimulationSystemeSolaire extends Application {
     // ===================================================================
     @Override
     public void start(Stage primaryStage) {
-        Group root  = new Group();
+        root  = new Group();
         Scene scene = new Scene(root, Config.WIDTH, Config.HEIGHT, true);
         scene.setFill(new ImagePattern(new Image("/resources/textures/stars.png")));
 
         initCamera(scene);
         setupControls(scene);
         systeme.init(root);
+
+        // Initialisation de la lumière (Soleil)
+        LightEngine lightEngine = new LightEngine();
+        root.getChildren().add(lightEngine.getSun());
+
+        // Lumière ambiante très douce pour voir les faces cachées
+        AmbientLight ambientLight = new AmbientLight(javafx.scene.paint.Color.rgb(40, 40, 40));
+        root.getChildren().add(ambientLight);
+
         startAnimationLoop();
 
         primaryStage.setTitle("Simulateur du Système Solaire 3D");
@@ -68,7 +80,7 @@ public class SimulationSystemeSolaire extends Application {
     private void initCamera(Scene scene) {
         camera = new PerspectiveCamera(true);
         camera.setNearClip(0.1);
-        camera.setFarClip(100_000.0);
+        camera.setFarClip(5_000_000.0);
         camera.setTranslateZ(-500);
         scene.setCamera(camera);
 
