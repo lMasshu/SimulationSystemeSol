@@ -7,10 +7,11 @@ import javafx.scene.Group;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Cylinder;
-import javafx.scene.shape.Polyline;
+import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
+import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
+import Classes.data.Config;
 
 /**
  * Représentation d'un corps céleste dans la simulation 3D.
@@ -40,10 +41,15 @@ public class Astre {
     public Group         root;
     public Color         couleur;
     protected Sphere        sprite;
-    protected Polyline      trajectory;
+    protected Group         orbitPathGroup;
+    private   MeshView      orbitMeshView;
+    private   TriangleMesh  orbitMesh;
+    private   Point3D[]     orbitCalculatedPoints;
+    private   PhongMaterial orbitMaterial;
     protected PhongMaterial material;
     private   Rotate        selfRotation;
-    private   Point3D       previousPosition = null;
+    private   long          lastVisualUpdateMillis = 0;
+    private   Point3D       lastCameraVisualPos    = null;
 
     // ===================================================================
     //  CONSTRUCTEURS
@@ -98,8 +104,8 @@ public class Astre {
         double[] pos = orbite.calculerPosition(t);
         this.position = new Point3D(
             pos[0] * scaleDistance + centrePosition.getX(),
-            pos[1] * scaleDistance + centrePosition.getY(),
-            pos[2] * scaleDistance + centrePosition.getZ()
+            pos[2] * scaleDistance + centrePosition.getY(), // Inclinaison sur Y
+            pos[1] * scaleDistance + centrePosition.getZ()  // Ecliptique sur Z
         );
     }
 
@@ -113,8 +119,8 @@ public class Astre {
         double   scale = scaleDistance * factor;
         this.position  = new Point3D(
             pos[0] * scale + parentPosition.getX(),
-            pos[1] * scale + parentPosition.getY(),
-            pos[2] * scale + parentPosition.getZ()
+            pos[2] * scale + parentPosition.getY(), // Inclinaison sur Y
+            pos[1] * scale + parentPosition.getZ()  // Ecliptique sur Z
         );
     }
 
@@ -146,9 +152,16 @@ public class Astre {
      * @param traj        Activer le tracé de trajectoire (cylindres entre positions).
      * @param texturePath Chemin vers la texture PNG dans les resources.
      */
-    public boolean renderAstreSansTrajectoire(boolean traj, String texturePath) {
+    /**
+     * Mise à jour du sprite 3D et du tracé des trajectoires.
+     *
+     * @param traj           Activer le tracé de trajectoire (optionnel).
+     * @param texturePath    Chemin vers la texture PNG.
+     * @param parentPosition Position de l'astre parent (pour translater l'orbite si nécessaire).
+     */
+    public boolean render(boolean traj, String texturePath, Point3D parentPosition) {
         try {
-            // --- Initialisation unique ---
+            // --- Initialisation unique du sprite ---
             if (this.sprite == null) {
                 Sphere sphere = new Sphere(this.diametre / 2, 32);
 
@@ -161,12 +174,11 @@ public class Astre {
                     mat.setDiffuseColor(Color.GRAY);
                 }
                 sphere.setMaterial(mat);
-                sphere.setUserData(this); // Pour le mouse picking de CameraController
+                sphere.setUserData(this);
                 sphere.getTransforms().add(selfRotation);
 
                 this.material        = mat;
                 this.sprite          = sphere;
-                this.previousPosition = this.position;
                 root.getChildren().add(sphere);
             }
 
@@ -175,32 +187,15 @@ public class Astre {
             sprite.setTranslateY(position.getY());
             sprite.setTranslateZ(position.getZ());
 
-            // --- Trajectoire (cylindres) ---
-            if (traj && previousPosition != null && !previousPosition.equals(position)) {
-                Point3D diff   = position.subtract(previousPosition);
-                double  height = diff.magnitude();
-                if (height > 0) {
-                    Cylinder line = new Cylinder(0.4, height);
-                    PhongMaterial lm = new PhongMaterial();
-                    lm.setDiffuseColor(Color.rgb(255, 255, 255, 0.5));
-                    lm.setSpecularColor(Color.WHITE);
-                    line.setMaterial(lm);
-
-                    Point3D mid = previousPosition.midpoint(position);
-                    line.setTranslateX(mid.getX());
-                    line.setTranslateY(mid.getY());
-                    line.setTranslateZ(mid.getZ());
-
-                    Point3D yAxis = new Point3D(0, 1, 0);
-                    Point3D axis  = yAxis.crossProduct(diff);
-                    double  angle = Math.toDegrees(Math.acos(diff.normalize().dotProduct(yAxis)));
-                    if (!Double.isNaN(angle) && axis.magnitude() > 0) {
-                        line.getTransforms().add(new Rotate(angle, axis));
-                    }
-                    root.getChildren().add(line);
+            // --- Visibilité et position de l'orbite ---
+            if (orbitPathGroup != null) {
+                orbitPathGroup.setVisible(traj);
+                if (parentPosition != null) {
+                    orbitPathGroup.setTranslateX(parentPosition.getX());
+                    orbitPathGroup.setTranslateY(parentPosition.getY());
+                    orbitPathGroup.setTranslateZ(parentPosition.getZ());
                 }
             }
-            previousPosition = position;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -209,13 +204,153 @@ public class Astre {
         return true;
     }
 
+    /** Overload pour les astres sans parent (ex: Soleil). */
+    public boolean render(boolean traj, String texturePath) {
+        return render(traj, texturePath, null);
+    }
+
+    /**
+     * Calcule et affiche l'orbite complète de l'astre.
+     * @param scaleDistance Facteur d'échelle pour les distances.
+     * @param factor Facteur multiplicatif pour rendre les orbites visibles (lunes).
+     */
+    /**
+     * Initialise la trajectoire orbitale complète sous forme de MeshView unique.
+     * @param scaleDistance Facteur d'échelle pour l'UA.
+     * @param factor Facteur d'affichage propre à l'astre (lunes).
+     */
+    public void initOrbitPath(double scaleDistance, double factor) {
+        if (periodeOrbitale <= 0 || orbitMeshView != null) return;
+
+        // --- OPTIMISATION : 120 segments au lieu de 360 ---
+        int numPoints = 120;
+        orbitCalculatedPoints = new Point3D[numPoints];
+        double step = periodeOrbitale / (double)numPoints;
+
+        for (int i = 0; i < numPoints; i++) {
+            double[] pos = orbite.calculerPosition(i * step);
+            orbitCalculatedPoints[i] = new Point3D(
+                pos[0] * scaleDistance * factor,
+                pos[2] * scaleDistance * factor, // Inclinaison sur Y
+                pos[1] * scaleDistance * factor  // Ecliptique sur Z
+            );
+        }
+
+        // --- Construction du Mesh initial ---
+        orbitMesh = new TriangleMesh();
+        
+        // Coordonnées de texture vides (requises par TriangleMesh)
+        orbitMesh.getTexCoords().addAll(0, 0);
+
+        // Faces : On relie chaque segment (4 faces par segment, 2 triangles par face)
+        for (int i = 0; i < numPoints; i++) {
+            int next = (i + 1) % numPoints;
+            int i4 = i * 4;
+            int next4 = next * 4;
+
+            // 4 faces du tube (carré)
+            for (int f = 0; f < 4; f++) {
+                int fNext = (f + 1) % 4;
+                // Triangle 1
+                orbitMesh.getFaces().addAll(i4 + f, 0, next4 + f, 0, next4 + fNext, 0);
+                // Triangle 2
+                orbitMesh.getFaces().addAll(i4 + f, 0, next4 + fNext, 0, i4 + fNext, 0);
+            }
+        }
+
+        orbitMeshView = new MeshView(orbitMesh);
+        orbitMaterial = new PhongMaterial();
+        orbitMaterial.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), Config.ORBIT_MIN_OPACITY));
+        orbitMeshView.setMaterial(orbitMaterial);
+        
+        orbitPathGroup = new Group(orbitMeshView);
+        root.getChildren().add(orbitPathGroup);
+        orbitPathGroup.setVisible(false);
+
+        // Initialisation des points du Mesh à une épaisseur de base
+        updateMeshPoints(Config.ORBIT_MIN_RADIUS);
+    }
+
+    /**
+     * Calcule le niveau de détail dynamique de l'orbite en fonction de la distance à la caméra.
+     */
+    public void updateOrbitVisuals(Point3D cameraPos) {
+        if (orbitMeshView == null || !orbitPathGroup.isVisible()) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastVisualUpdateMillis < 100) return;
+        if (lastCameraVisualPos != null && cameraPos.distance(lastCameraVisualPos) < 5.0) return;
+
+        lastVisualUpdateMillis = now;
+        lastCameraVisualPos = cameraPos;
+
+        double distance = cameraPos.distance(this.position);
+        
+        // --- NOUVELLE LOGIQUE : Rayon proportionnel à la distance ---
+        // On utilise la distance de référence pour définir le rayon de base
+        double factor = distance / Config.ORBIT_REFERENCE_DIST;
+        
+        // Update Opacity (logarithmique reste bien pour l'opacité)
+        double logRatio = Math.log10(factor + 1);
+        double opacity = Math.min(Config.ORBIT_MAX_OPACITY, Config.ORBIT_MIN_OPACITY * (1.0 + logRatio * 10.0));
+        orbitMaterial.setDiffuseColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), opacity));
+
+        // Update Thickness (linéaire pour plus de réactivité au zoom)
+        // On bride entre Config.ORBIT_MIN_RADIUS et Config.ORBIT_MAX_RADIUS
+        double radius = Math.max(Config.ORBIT_MIN_RADIUS, Math.min(Config.ORBIT_MAX_RADIUS, factor * 2.0));
+        updateMeshPoints(radius);
+    }
+
+    private void updateMeshPoints(double radius) {
+        if (orbitMesh == null) return;
+        
+        int numPoints = orbitCalculatedPoints.length;
+        float[] points = new float[numPoints * 4 * 3]; // 4 vertices par point, 3 coordonées (x,y,z)
+        float r = (float)radius;
+
+        for (int i = 0; i < numPoints; i++) {
+            Point3D p = orbitCalculatedPoints[i];
+            
+            // Calcul de la direction du segment (tangente locale)
+            Point3D next = orbitCalculatedPoints[(i + 1) % numPoints];
+            Point3D prev = orbitCalculatedPoints[(i - 1 + numPoints) % numPoints];
+            Point3D tangent = next.subtract(prev).normalize();
+
+            // Création d'un repère local (Vecteurs orthogonaux U et V)
+            // On utilise un vecteur vertical arbitraire pour débuter le cross product
+            Point3D up = (Math.abs(tangent.getY()) > 0.9) ? new Point3D(1, 0, 0) : new Point3D(0, 1, 0);
+            Point3D u  = tangent.crossProduct(up).normalize();
+            Point3D v  = tangent.crossProduct(u).normalize();
+
+            // 4 vertices formant un carré perpendiculaire à la tangente
+            // Point 0
+            points[i * 12 + 0] = (float)(p.getX() + (u.getX() + v.getX()) * r);
+            points[i * 12 + 1] = (float)(p.getY() + (u.getY() + v.getY()) * r);
+            points[i * 12 + 2] = (float)(p.getZ() + (u.getZ() + v.getZ()) * r);
+            // Point 1
+            points[i * 12 + 3] = (float)(p.getX() + (u.getX() - v.getX()) * r);
+            points[i * 12 + 4] = (float)(p.getY() + (u.getY() - v.getY()) * r);
+            points[i * 12 + 5] = (float)(p.getZ() + (u.getZ() - v.getZ()) * r);
+            // Point 2
+            points[i * 12 + 6] = (float)(p.getX() + (-u.getX() - v.getX()) * r);
+            points[i * 12 + 7] = (float)(p.getY() + (-u.getY() - v.getY()) * r);
+            points[i * 12 + 8] = (float)(p.getZ() + (-u.getZ() - v.getZ()) * r);
+            // Point 3
+            points[i * 12 + 9] = (float)(p.getX() + (-u.getX() + v.getX()) * r);
+            points[i * 12 + 10] = (float)(p.getY() + (-u.getY() + v.getY()) * r);
+            points[i * 12 + 11] = (float)(p.getZ() + (-u.getZ() + v.getZ()) * r);
+        }
+
+        orbitMesh.getPoints().setAll(points);
+    }
+
     // ===================================================================
     //  UTILITAIRES
     // ===================================================================
 
-    /** Efface les points de trajectoire accumulés. */
+    /** Efface les trajectoires accumulées (non utilisé avec le nouveau système). */
     public void resetTrajectory() {
-        if (trajectory != null) trajectory.getPoints().clear();
+        if (orbitPathGroup != null) orbitPathGroup.setVisible(false);
     }
 
     @Override
