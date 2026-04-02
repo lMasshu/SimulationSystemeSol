@@ -168,7 +168,11 @@ public class Astre {
                 PhongMaterial mat = new PhongMaterial();
                 InputStream stream = getClass().getResourceAsStream(texturePath);
                 if (stream != null) {
-                    mat.setDiffuseMap(new Image(stream));
+                    Image img = new Image(stream);
+                    mat.setDiffuseMap(img);
+                    if (this.nom.equals("Soleil")) {
+                        mat.setSelfIlluminationMap(img);
+                    }
                 } else {
                     System.err.println("Texture introuvable : " + texturePath);
                     mat.setDiffuseColor(Color.GRAY);
